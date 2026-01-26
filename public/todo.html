@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Lists</title>
+    <link rel="stylesheet" href="/css/todo.css"/>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>Todo Planner</h1>
+            <nav class="nav-links">
+                <a href="/calendar">Calendar</a>
+                <form action="/auth/logout" method="POST" class="logout-form">
+                    <button type="submit" class="logout">Logout</button>
+                </form>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <!-- Levý panel: Todolisty -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <h2>Todolists</h2>
+            </div>
+            <div class="add-row">
+                <input type="text" id="tasklist-title" placeholder="New list">
+                <button id="add-tasklist-btn">Add</button>
+            </div>
+            <div class="todolists-list">
+            </div>
+        </div>
+
+        <!-- Prostřední panel: Úkoly -->
+        <div class="middle-panel">
+            <div class="panel-header">
+                <h2>Tasks</h2>
+            </div>
+            <div class="add-row">
+                <input type="text" id="task-title-input" placeholder="New task">
+                <button id="add-task-btn">Add</button>
+            </div>
+            <div class="tasks-list">
+            </div>
+        </div>
+
+        <!-- Pravý panel: Editor úkolu -->
+        <div class="right-panel">
+            <div class="panel-header">
+                <h2>Edit Task</h2>
+            </div>
+            <div class="task-editor">
+                <div class="form-group">
+                    <label for="task-title">Task Name:</label>
+                    <input type="text" id="task-title" placeholder="Enter task name">
+                </div>
+
+                <div class="form-group">
+                    <label for="task-due">Due Date:</label>
+                    <input type="date" id="task-due">
+                </div>
+
+                <div class="form-group">
+                    <button class="btn-save">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/js/todo.js"></script>
+</body>
+</html>

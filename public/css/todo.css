@@ -1,0 +1,197 @@
+body {
+	font-family: Arial, sans-serif;
+	margin: 0;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.header {
+	background: #333;
+	color: #fff;
+	padding: 12px 16px;
+	display: flex;
+	justify-content: space-between;
+}
+
+.nav-links {
+	display: flex;
+	gap: 10px;
+}
+
+.nav-links a,
+.logout-form .logout {
+	color: #fff;
+	background: #555;
+	text-decoration: none;
+	padding: 5px 8px;
+	border: none;
+}
+
+.logout-form {
+	margin: 0;
+}
+
+.logout-form .logout {
+	background: #dc3545;
+	cursor: pointer;
+}
+
+.container {
+	display: flex;
+	flex: 1;
+}
+
+.left-panel,
+.middle-panel,
+.right-panel {
+	padding: 12px;
+	border-right: 1px solid #ddd;
+	overflow-y: auto;
+}
+
+.left-panel {
+	width: 25%;
+}
+
+.middle-panel {
+	width: 35%;
+	background: #f9f9f9;
+}
+
+.right-panel {
+	width: 40%;
+}
+
+.panel-header {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 10px;
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 8px;
+}
+
+.add-row {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.add-row input {
+	flex: 1;
+	padding: 6px;
+	border: 1px solid #ccc;
+}
+
+.add-row button {
+	padding: 6px 8px;
+	background: #333;
+	color: #fff;
+	border: none;
+	cursor: pointer;
+}
+
+.todolist-item,
+.task-item {
+	padding: 8px;
+	cursor: pointer;
+	border-bottom: 1px solid #eee;
+}
+
+.todolist-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.todolist-title {
+	flex: 1;
+}
+
+.todolist-delete {
+	background: transparent;
+	border: none;
+	color: #dc3545;
+	font-size: 14px;
+	cursor: pointer;
+	padding: 2px 6px;
+}
+
+.todolist-delete:hover {
+	background: #f8d7da;
+}
+
+.todolist-item.active,
+.task-item.active {
+	font-weight: bold;
+	background: #e3f2fd;
+}
+
+.task-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.task-item.completed .task-name {
+	text-decoration: line-through;
+	color: #6c757d;
+}
+
+.task-name {
+	flex: 1;
+}
+
+.task-due {
+	font-size: 12px;
+	color: #6c757d;
+	margin-left: 6px;
+}
+
+.task-delete {
+	background: transparent;
+	border: none;
+	color: #dc3545;
+	font-size: 14px;
+	cursor: pointer;
+	padding: 2px 6px;
+}
+
+.task-delete:hover {
+	background: #f8d7da;
+}
+
+.form-group {
+	margin-bottom: 10px;
+}
+
+.form-group label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: bold;
+}
+
+.form-group input {
+	width: 100%;
+	padding: 6px;
+	border: 1px solid #ccc;
+}
+
+.form-group button {
+	width: 100%;
+	padding: 8px;
+	border: none;
+	cursor: pointer;
+	font-weight: bold;
+}
+
+.btn-save {
+	background: #28a745;
+	color: #fff;
+}
+
+.btn-delete {
+	background: #dc3545;
+	color: #fff;
+}
