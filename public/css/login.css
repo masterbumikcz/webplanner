@@ -1,18 +1,67 @@
+/*
+https://coolors.co/palette/606c38-283618-fefae0-dda15e-bc6c25
+*/
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #FEFAE0;
+    --card: #FFFFFF;
+    --text: #283618;
+    --muted: #606C38;
+    --border: #DDA15E;
+    --primary: #606C38;
+    --primary-dark: #283618;
+    --secondary: #BC6C25;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    color: var(--text);
 }
 
 .card {
-    background: white;
-    padding: 20px;
-    border: 1px solid #ddd;
-    width: 300px;
+    background: var(--card);
+    padding: 24px;
+    border: 1px solid var(--border);
+    width: 320px;
+    border-radius: 14px;
+    box-shadow: 0 16px 30px #DDA15E;
+}
+
+.messages {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0 12px;
+    min-height: 0;
+}
+
+.message {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid transparent;
+    background: #FFFFFF;
+}
+
+.message--error {
+    border-color: #C0392B;
+    color: #7B241C;
+    background: #F9EBEA;
+}
+
+.message--success {
+    border-color: #1E8449;
+    color: #1E5631;
+    background: #E9F7EF;
 }
 
 h2 {
@@ -22,22 +71,37 @@ h2 {
 label {
     display: block;
     margin: 10px 0 5px;
+    font-weight: 600;
 }
 
 input {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+input:focus {
+    outline: 2px solid #DDA15E;
+    border-color: var(--primary);
 }
 
 button {
     width: 100%;
     margin-top: 15px;
-    padding: 8px;
+    padding: 10px;
     border: none;
-    background: #333;
-    color: white;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    color: #FEFAE0;
     cursor: pointer;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px #DDA15E;
 }
 
 .links {
@@ -48,6 +112,6 @@ button {
 }
 
 .links a {
-    color: #333;
+    color: #283618;
     text-decoration: none;
 }

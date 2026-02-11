@@ -9,7 +9,7 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <h1>Todo Planner</h1>
+            <h1>Todo</h1>
             <nav class="nav-links">
                 <a href="/calendar">Calendar</a>
                 <form action="/auth/logout" method="POST" class="logout-form">
@@ -22,7 +22,14 @@
         <!-- Levý panel: Todolisty -->
         <div class="left-panel">
             <div class="panel-header">
-                <h2>Todolists</h2>
+                <h2>Quick views</h2>
+            </div>
+            <div class="quick-views">
+                <button id="quick-view-all" class="quick-view" type="button">All tasks</button>
+                <button id="quick-view-current-day" class="quick-view" type="button">Current Day</button>
+            </div>
+            <div class="panel-header">
+                <h2>Todo lists</h2>
             </div>
             <div class="add-row">
                 <input type="text" id="tasklist-title" placeholder="New list">

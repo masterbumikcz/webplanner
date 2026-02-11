@@ -110,6 +110,22 @@ router.post(
   },
 );
 
+// Získání všech úkolů pro přihlášeného uživatele (napříč seznamy)
+router.get("/tasks", ensureApiAuthenticated, async (req, res) => {
+  try {
+    const tasks = await db.all(
+      `SELECT id, title, is_completed, due, tasklist_id
+       FROM tasks
+       WHERE user_id = ?
+       ORDER BY due IS NULL, due ASC, title ASC`,
+      [req.user.id],
+    );
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
+});
+
 // Uložení změn úkolu
 router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
   const { title, is_completed, due } = req.body;

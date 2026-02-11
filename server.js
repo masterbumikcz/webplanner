@@ -14,7 +14,9 @@ import {
   ensureNotAuthenticated,
 } from "./middleware/authMiddleware.js";
 import authRoutes from "./routes/authRoutes.js";
+import eventRoutes from "./routes/eventRoutes.js";
 import todoRoutes from "./routes/todoRoutes.js";
+import passResetRoutes from "./routes/passResetRoutes.js";
 
 // Config
 dotenv.config();
@@ -45,7 +47,9 @@ app.use(flash());
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/api/events", eventRoutes);
 app.use("/api/todo", todoRoutes);
+app.use("/password", passResetRoutes);
 
 app.get("/", (req, res) => {
   if (req.isAuthenticated()) {
@@ -60,6 +64,10 @@ app.get("/login", ensureNotAuthenticated, (req, res) => {
 
 app.get("/register", ensureNotAuthenticated, (req, res) => {
   res.sendFile(join(__dirname, "public", "register.html"));
+});
+
+app.get("/forgot-password", (req, res) => {
+  res.sendFile(join(__dirname, "public", "forgotpassword.html"));
 });
 
 app.get("/api/messages", (req, res) => {

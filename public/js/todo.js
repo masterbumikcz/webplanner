@@ -1,9 +1,15 @@
 // Proměnné pro aktuálně vybraný seznam a úkol
 let currentList = null;
 let currentTaskId = null;
+let currentView = "list";
+const quickViewAllButton = document.getElementById("quick-view-all");
+const quickViewCurrentDayButton = document.getElementById(
+  "quick-view-current-day",
+);
 
 // Načtení seznamů úkolů po načtení dokumentu
 document.addEventListener("DOMContentLoaded", () => {
+  setupQuickViews();
   loadTodolists();
 });
 
@@ -45,39 +51,65 @@ async function loadTodolists() {
   }
 }
 
-// Odstranění seznamu
-async function deleteList(list) {
-  try {
-    await fetch(`/api/todo/lists/${list.id}`, { method: "DELETE" });
+function setupQuickViews() {
+  // Nastaví obsluhu kliknutí pro rychlé pohledy
+  quickViewAllButton.onclick = () => {
+    setQuickView("all");
+  };
 
-    if (currentList && currentList.id === list.id) {
-      currentList = null;
-      currentTaskId = null;
-      document.querySelector(".tasks-list").innerHTML = "";
-      document.getElementById("task-title").value = "";
-      document.getElementById("task-due").value = "";
-    }
+  quickViewCurrentDayButton.onclick = () => {
+    setQuickView("currentDay");
+  };
+}
 
-    loadTodolists();
-  } catch (err) {
-    alert("Error deleting list");
+function setQuickView(view) {
+  // Přepne do rychlého pohledu a vyčistí výběry
+  currentView = view;
+  currentList = null;
+  currentTaskId = null;
+  clearListSelection();
+  clearTaskEditor();
+  updateQuickViewActive(view);
+
+  if (view === "all") {
+    // Načte všechny úkoly napříč seznamy
+    loadTasksForView();
+  } else {
+    // Placeholder pro Current Day (přidáme později)
+    document.querySelector(".tasks-list").innerHTML = "";
   }
 }
 
-// Výběr seznamu úkolů a načtení jeho úkolů
-function selectList(list, element) {
-  currentList = list;
+function updateQuickViewActive(view) {
+  // Zvýrazní aktivní rychlý pohled
+  quickViewAllButton.classList.toggle("active", view === "all");
+  quickViewCurrentDayButton.classList.toggle("active", view === "currentDay");
+}
+
+function clearListSelection() {
+  // Zruší aktivní označení seznamu
   document
     .querySelectorAll(".todolist-item")
     .forEach((el) => el.classList.remove("active"));
-  element.classList.add("active");
-  loadTasks(list.id);
 }
 
-// Načtení úkolů pro vybraný seznam
-async function loadTasks(taskListId) {
+function clearTaskEditor() {
+  // Vyčistí editor úkolu
+  document.getElementById("task-title").value = "";
+  document.getElementById("task-due").value = "";
+  document
+    .querySelectorAll(".task-item")
+    .forEach((el) => el.classList.remove("active"));
+}
+
+async function loadTasksForView(taskListId) {
+  // Načte úkoly podle aktuálního pohledu (list/all)
   try {
-    const res = await fetch(`/api/todo/lists/${taskListId}/tasks`);
+    const url =
+      currentView === "all"
+        ? "/api/todo/tasks"
+        : `/api/todo/lists/${taskListId}/tasks`;
+    const res = await fetch(url);
     const tasks = await res.json();
     const taskContainer = document.querySelector(".tasks-list");
     taskContainer.innerHTML = "";
@@ -125,6 +157,40 @@ async function loadTasks(taskListId) {
   }
 }
 
+// Odstranění seznamu
+async function deleteList(list) {
+  try {
+    await fetch(`/api/todo/lists/${list.id}`, { method: "DELETE" });
+
+    if (currentList && currentList.id === list.id) {
+      currentList = null;
+      currentTaskId = null;
+      document.querySelector(".tasks-list").innerHTML = "";
+      document.getElementById("task-title").value = "";
+      document.getElementById("task-due").value = "";
+    }
+
+    loadTodolists();
+  } catch (err) {
+    alert("Error deleting list");
+  }
+}
+
+// Výběr seznamu úkolů a načtení jeho úkolů
+function selectList(list, element) {
+  currentList = list;
+  currentView = "list";
+  updateQuickViewActive(null);
+  clearTaskEditor();
+  document
+    .querySelectorAll(".todolist-item")
+    .forEach((el) => el.classList.remove("active"));
+  element.classList.add("active");
+  loadTasksForView(list.id);
+}
+
+// Načtení úkolů pro vybraný seznam
+
 // Výběr úkolu pro úpravy
 function selectTask(task, element) {
   currentTaskId = task.id;
@@ -149,7 +215,11 @@ async function toggleTask(task) {
       }),
     });
 
-    if (currentList) loadTasks(currentList.id);
+    if (currentView === "all") {
+      loadTasksForView();
+    } else if (currentList) {
+      loadTasksForView(currentList.id);
+    }
   } catch (err) {
     console.error("Error updating task:", err);
   }
@@ -159,6 +229,12 @@ async function toggleTask(task) {
 document.querySelector(".btn-save").onclick = async () => {
   if (!currentTaskId || !currentList) {
     alert("Select a task first");
+    return;
+  }
+
+  const title = document.getElementById("task-title").value.trim();
+  if (!title) {
+    alert("Task title is required");
     return;
   }
 
@@ -173,7 +249,11 @@ document.querySelector(".btn-save").onclick = async () => {
       }),
     });
 
-    loadTasks(currentList.id);
+    if (currentView === "all") {
+      loadTasksForView();
+    } else {
+      loadTasksForView(currentList.id);
+    }
   } catch (err) {
     alert("Error saving task");
   }
@@ -186,7 +266,11 @@ async function deleteTask(task) {
   try {
     await fetch(`/api/todo/tasks/${task.id}`, { method: "DELETE" });
     alert("Task deleted");
-    if (currentList) loadTasks(currentList.id);
+    if (currentView === "all") {
+      loadTasksForView();
+    } else if (currentList) {
+      loadTasksForView(currentList.id);
+    }
 
     if (currentTaskId === task.id) {
       currentTaskId = null;
@@ -217,7 +301,7 @@ document.getElementById("add-task-btn").onclick = async () => {
     });
 
     input.value = "";
-    loadTasks(currentList.id);
+    loadTasksForView(currentList.id);
   } catch (err) {
     alert("Error adding task");
   }

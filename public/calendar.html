@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar</title>
-    <link rel="stylesheet" href="/css/todo.css"/>
+    <link rel="stylesheet" href="/css/calendar.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css"/>
 </head>
 <body>
     <header class="header">
@@ -18,8 +19,44 @@
             </nav>
         </div>
     </header>
-    <div class="container">
-        <h2>Calendar</h2>
+    <div class="container calendar-layout">
+        <div class="calendar-panel">
+            <div class="panel-header">
+                <h2>Calendar</h2>
+            </div>
+            <div id="calendar"></div>
+        </div>
+        <div class="event-panel">
+            <div class="panel-header">
+                <h2>Event</h2>
+            </div>
+            <div class="form-group">
+                <label for="event-title">Title</label>
+                <input type="text" id="event-title" placeholder="Event title">
+            </div>
+            <div class="form-group">
+                <label for="event-start">Start</label>
+                <input type="datetime-local" id="event-start">
+            </div>
+            <div class="form-group">
+                <label for="event-end">End</label>
+                <input type="datetime-local" id="event-end">
+            </div>
+            <div class="form-group checkbox-group">
+                <label for="event-all-day">
+                    <input type="checkbox" id="event-all-day" checked>
+                    All day
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-save" id="event-add">Add Event</button>
+                <button type="button" class="btn-save" id="event-save">Save Changes</button>
+                <button type="button" class="btn-delete" id="event-delete">Delete Event</button>
+            </div>
+            <p class="helper-text" id="event-helper">Select a date to add, or an event to edit/delete.</p>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script src="/js/calendar.js"></script>
 </body>
 </html>

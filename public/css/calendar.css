@@ -1,0 +1,245 @@
+* {
+  box-sizing: border-box;
+}
+
+input {
+  font: inherit;
+}
+
+:root {
+  --bg: #FEFAE0;
+  --card: #FFFFFF;
+  --text: #283618;
+  --border: #DDA15E;
+  --primary: #606C38;
+  --accent: #BC6C25;
+}
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.header {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: #fff;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.header-content {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-links a,
+.logout-form .logout {
+  color: #FEFAE0;
+  background: #606C38;
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid #283618;
+  border-radius: 6px;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.nav-links a:hover,
+.logout-form .logout:hover {
+  background: #BC6C25;
+  transform: translateY(-1px);
+}
+
+.logout-form {
+  margin: 0;
+}
+
+.logout-form .logout {
+  background: #283618;
+  color: #FEFAE0;
+  padding: 6px 10px;
+  border: 1px solid #283618;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.container {
+  width: 100%;
+  max-width: 1700px;
+  margin: 16px auto;
+  padding: 0 16px;
+  flex: 1;
+}
+
+.calendar-layout {
+  display: flex;
+  gap: 12px;
+}
+
+.calendar-panel {
+  flex: 1.6;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.event-panel {
+  width: 320px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.container h2 {
+  margin: 0;
+}
+
+#calendar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 10px;
+  min-height: 680px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="datetime-local"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="date"]:focus,
+.form-group input[type="datetime-local"]:focus {
+  outline: 2px solid var(--border);
+  border-color: var(--primary);
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+}
+
+.form-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn-save,
+.btn-delete {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+.btn-save:disabled,
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-delete {
+  background: var(--accent);
+  color: #fff;
+}
+
+.helper-text {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--primary);
+}
+
+.fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-today-bg-color: #DDA15E;
+  --fc-neutral-bg-color: #FEFAE0;
+  --fc-button-text-color: #ffffff;
+  --fc-button-bg-color: var(--primary);
+  --fc-button-border-color: var(--primary);
+  --fc-button-hover-bg-color: var(--accent);
+  --fc-button-hover-border-color: var(--accent);
+  --fc-button-active-bg-color: var(--accent);
+  --fc-button-active-border-color: var(--accent);
+}
+
+.fc .fc-toolbar-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin: 0;
+}
+
+.fc .fc-daygrid-event-harness {
+  margin: 2px 2px;
+}
+
+.fc .fc-daygrid-day-frame {
+  padding: 4px;
+}
+
+.fc .fc-daygrid-event.fc-event-completed {
+  background: #94a3b8;
+  border-color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.fc .fc-daygrid-day-number {
+  color: var(--text);
+}

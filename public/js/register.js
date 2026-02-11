@@ -1,16 +1,22 @@
+// Zobrazení flash zpráv (úspěch/chyba) po registraci
 window.addEventListener("DOMContentLoaded", async () => {
   const response = await fetch("/api/messages");
   const messages = await response.json();
+  const messageBox = document.getElementById("message-box");
+  if (!messageBox) return;
 
+  messageBox.textContent = "";
+
+  const appendMessages = (items, type) => {
+    items.forEach((msg) => {
+      const el = document.createElement("div");
+      el.className = `message message--${type}`;
+      el.textContent = msg;
+      messageBox.appendChild(el);
+    });
+  };
+  // Zobrazení chybových zpráv pokud existují
   if (messages.error && messages.error.length > 0) {
-    messages.error.forEach((msg) => {
-      alert(msg);
-    });
-  }
-
-  if (messages.success && messages.success.length > 0) {
-    messages.success.forEach((msg) => {
-      alert(msg);
-    });
+    appendMessages(messages.error, "error");
   }
 });

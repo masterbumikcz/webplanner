@@ -17,7 +17,6 @@ router.post("/register", async (req, res) => {
     );
 
     if (existingUser) {
-      console.log("Registration failed: Email already exists");
       req.flash("error", "Email already exists. Please use a different email.");
       return res.redirect("/register");
     }
@@ -32,7 +31,6 @@ router.post("/register", async (req, res) => {
       hashedPassword,
     );
 
-    console.log("User registered successfully. Redirecting to login.");
     req.flash("success", "Registration successful! Please login.");
     return res.redirect("/login");
   } catch (err) {
