@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize calendar UI when the DOM is ready
+  // Inicializace kalendáře po načtení DOM
   const calendarEl = document.getElementById("calendar");
   if (!calendarEl) return;
 
@@ -11,35 +11,54 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveButton = document.getElementById("event-save");
   const deleteButton = document.getElementById("event-delete");
   const helperText = document.getElementById("event-helper");
+  const eventFeedback = document.getElementById("event-feedback");
 
-  // Tracks the currently selected event (null when creating a new one)
+  // Sleduje aktuálně vybranou událost (event) (null při vytváření nové)
   let selectedEvent = null;
 
-  // Format Date object for datetime-local input value
-  const formatDateTimeForInput = (date) => {
-    if (!date) return "";
-    const pad = (value) => String(value).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  };
+  // Vyčistí zpětnou vazbu pro uživatele
+  function clearFeedback() {
+    if (!eventFeedback) {
+      return;
+    }
 
-  // Convert datetime-local value to API format (date only for all-day)
-  const normalizeDateValue = (value, allDay) => {
+    eventFeedback.hidden = true;
+    eventFeedback.textContent = "";
+  }
+
+  // Zobrazí zpětnou vazbu pro uživatele
+  function showFeedback(message) {
+    if (!eventFeedback) {
+      return;
+    }
+
+    eventFeedback.textContent = message;
+    eventFeedback.hidden = false;
+  }
+
+  // Převod JavaScript Date objektu do formátu očekávaného datetime-local inputem
+  function toDateTimeInputValue(date) {
+    if (!date) return "";
+    return date.toISOString().slice(0, 16);
+  }
+
+  // Převod hodnot z datetime-local inputů do formátu očekávaného API (odstraní čas pro all-day události)
+  function toApiDateValue(value, allDay) {
     if (!value) return null;
     return allDay ? value.split("T")[0] : value;
-  };
+  }
 
-  // Normalize API date strings into datetime-local format
-  const formatDateStringForInput = (dateStr) => {
+  // Normalizuje API date strings do formátu očekávaného datetime-local inputem
+  function formatDateStringForInput(dateStr) {
     if (!dateStr) return "";
     if (dateStr.includes("T")) {
       return dateStr.slice(0, 16);
     }
     return `${dateStr}T00:00`;
-  };
+  }
 
-  // Populate the right-side editor based on selected event
-  // Česky: Naplní pravou stranu editoru podle vybraného události
-  const setEditorState = (event) => {
+  // Naplní pravou stranu editoru podle vybraného události
+  function setEditorState(event) {
     if (!event) {
       selectedEvent = null;
       titleInput.value = "";
@@ -59,20 +78,19 @@ document.addEventListener("DOMContentLoaded", () => {
     titleInput.value = event.title || "";
     startInput.value =
       formatDateStringForInput(event.startStr) ||
-      formatDateTimeForInput(event.start);
+      toDateTimeInputValue(event.start);
     endInput.value =
-      formatDateStringForInput(event.endStr) ||
-      formatDateTimeForInput(event.end);
+      formatDateStringForInput(event.endStr) || toDateTimeInputValue(event.end);
     allDayInput.checked = event.allDay;
     saveButton.disabled = false;
     deleteButton.disabled = false;
     if (helperText) {
       helperText.textContent = "Editing selected event.";
     }
-  };
+  }
 
   // Auto-toggle all-day off when a specific time is entered
-  const syncAllDayWithTime = () => {
+  function syncAllDayWithTime() {
     if (!allDayInput.checked) return;
     const startTime = startInput.value.split("T")[1] || "";
     const endTime = endInput.value.split("T")[1] || "";
@@ -82,10 +100,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
       allDayInput.checked = false;
     }
-  };
+  }
 
   // When all-day is enabled, force time to 00:00
-  const normalizeAllDayTimes = () => {
+  function normalizeAllDayTimes() {
     if (!allDayInput.checked) return;
     if (startInput.value.includes("T")) {
       startInput.value = `${startInput.value.split("T")[0]}T00:00`;
@@ -93,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (endInput.value.includes("T")) {
       endInput.value = `${endInput.value.split("T")[0]}T00:00`;
     }
-  };
+  }
 
   // FullCalendar configuration
   const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -107,7 +125,8 @@ document.addEventListener("DOMContentLoaded", () => {
       right: "dayGridMonth,timeGridWeek,timeGridDay",
     },
     // Prefill the editor when clicking a day cell
-    dateClick: async (info) => {
+    dateClick: (info) => {
+      clearFeedback();
       setEditorState(null);
       startInput.value = formatDateStringForInput(info.dateStr);
       endInput.value = "";
@@ -115,11 +134,12 @@ document.addEventListener("DOMContentLoaded", () => {
       titleInput.focus();
     },
     // Load selected event into the editor
-    eventClick: async (info) => {
+    eventClick: (info) => {
+      clearFeedback();
       setEditorState(info.event);
     },
     editable: true,
-    // Persist drag-and-drop updates
+    // Uložit změny při přetažení události
     eventDrop: async (info) => {
       try {
         const res = await fetch(`/api/events/${info.event.id}`, {
@@ -135,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!res.ok) throw new Error("Failed to update event");
       } catch (error) {
         info.revert();
-        alert("Error updating event");
+        showFeedback("Error updating event");
       }
     },
     // Fetch events from the API for the current view
@@ -162,20 +182,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   calendar.render();
 
-  startInput.addEventListener("input", syncAllDayWithTime);
-  endInput.addEventListener("input", syncAllDayWithTime);
-  allDayInput.addEventListener("change", normalizeAllDayTimes);
+  startInput.addEventListener("input", () => {
+    clearFeedback();
+    syncAllDayWithTime();
+  });
+  endInput.addEventListener("input", () => {
+    clearFeedback();
+    syncAllDayWithTime();
+  });
+  allDayInput.addEventListener("change", () => {
+    clearFeedback();
+    normalizeAllDayTimes();
+  });
+  titleInput.addEventListener("input", clearFeedback);
 
   // Save edits for the selected event
   saveButton.addEventListener("click", async () => {
+    clearFeedback();
+
     if (!selectedEvent) {
-      alert("Select an event first");
+      showFeedback("Select an event first");
       return;
     }
 
     const trimmedTitle = titleInput.value.trim();
     if (!trimmedTitle) {
-      alert("Title is required");
+      showFeedback("Title is required");
       return;
     }
 
@@ -185,42 +217,43 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: trimmedTitle,
-          start: normalizeDateValue(startInput.value, allDayInput.checked),
-          end: normalizeDateValue(endInput.value, allDayInput.checked),
+          start: toApiDateValue(startInput.value, allDayInput.checked),
+          end: toApiDateValue(endInput.value, allDayInput.checked),
           all_day: allDayInput.checked,
         }),
       });
       if (!res.ok) throw new Error("Failed to update event");
+
       selectedEvent.setProp("title", trimmedTitle);
       if (startInput.value) {
         selectedEvent.setStart(
-          normalizeDateValue(startInput.value, allDayInput.checked),
+          toApiDateValue(startInput.value, allDayInput.checked),
         );
       }
-      selectedEvent.setEnd(
-        normalizeDateValue(endInput.value, allDayInput.checked),
-      );
+      selectedEvent.setEnd(toApiDateValue(endInput.value, allDayInput.checked));
       selectedEvent.setAllDay(allDayInput.checked);
     } catch (error) {
-      alert("Error updating event");
+      showFeedback("Error updating event");
     }
   });
 
-  // Create a new event from the editor
+  // Vytvoření nové události
   addButton.addEventListener("click", async () => {
+    clearFeedback();
+
     const title = titleInput.value.trim();
     if (!title) {
-      alert("Title is required");
+      showFeedback("Title is required");
       return;
     }
 
     if (!startInput.value) {
-      alert("Start date/time is required");
+      showFeedback("Start date/time is required");
       return;
     }
 
     if (selectedEvent) {
-      alert("Clear selection to add a new event");
+      showFeedback("Clear selection to add a new event");
       return;
     }
 
@@ -230,40 +263,42 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          start: normalizeDateValue(startInput.value, allDayInput.checked),
-          end: normalizeDateValue(endInput.value, allDayInput.checked),
+          start: toApiDateValue(startInput.value, allDayInput.checked),
+          end: toApiDateValue(endInput.value, allDayInput.checked),
           all_day: allDayInput.checked,
         }),
       });
       if (!res.ok) throw new Error("Failed to create event");
+
       titleInput.value = "";
       startInput.value = "";
       endInput.value = "";
       allDayInput.checked = true;
       calendar.refetchEvents();
     } catch (error) {
-      alert("Error creating event");
+      showFeedback("Error creating event");
     }
   });
 
-  // Delete the selected event
+  // Odstranění vybrané události
   deleteButton.addEventListener("click", async () => {
+    clearFeedback();
+
     if (!selectedEvent) {
-      alert("Select an event first");
+      showFeedback("Select an event first");
       return;
     }
-
-    if (!confirm("Delete this event?")) return;
 
     try {
       const res = await fetch(`/api/events/${selectedEvent.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete event");
+
       selectedEvent.remove();
       setEditorState(null);
     } catch (error) {
-      alert("Error deleting event");
+      showFeedback("Error deleting event");
     }
   });
 

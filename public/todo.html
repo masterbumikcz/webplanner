@@ -19,7 +19,7 @@
         </div>
     </header>
     <div class="container">
-        <!-- Levý panel: Todolisty -->
+        <!-- Levý panel: Todolisty a rychlé pohledy (Quick Views, Todo Lists) -->
         <div class="left-panel">
             <div class="panel-header">
                 <h2>Quick views</h2>
@@ -27,6 +27,8 @@
             <div class="quick-views">
                 <button id="quick-view-all" class="quick-view" type="button">All tasks</button>
                 <button id="quick-view-current-day" class="quick-view" type="button">Current Day</button>
+                <button id="quick-view-overdue" class="quick-view" type="button">Overdue</button>
+                <button id="quick-view-completed" class="quick-view" type="button">Completed</button>
             </div>
             <div class="panel-header">
                 <h2>Todo lists</h2>
@@ -39,10 +41,22 @@
             </div>
         </div>
 
-        <!-- Prostřední panel: Úkoly -->
+        <!-- Prostřední panel: Úkoly (Tasks) -->
         <div class="middle-panel">
             <div class="panel-header">
                 <h2>Tasks</h2>
+            </div>
+            <div class="add-row sort-row">
+                <label for="task-sort">Sort by</label>
+                <select id="task-sort">
+                    <option value="default">Default</option>
+                    <option value="title_asc">Alphabetically (A-Z)</option>
+                    <option value="title_desc">Alphabetically (Z-A)</option>
+                    <option value="due_asc">Due date (earliest first)</option>
+                    <option value="due_desc">Due date (latest first)</option>
+                    <option value="created_desc">Created at (newest first)</option>
+                    <option value="created_asc">Created at (oldest first)</option>
+                </select>
             </div>
             <div class="add-row">
                 <input type="text" id="task-title-input" placeholder="New task">
@@ -52,7 +66,7 @@
             </div>
         </div>
 
-        <!-- Pravý panel: Editor úkolu -->
+        <!-- Pravý panel: Editor úkolu (Edit Task) -->
         <div class="right-panel">
             <div class="panel-header">
                 <h2>Edit Task</h2>

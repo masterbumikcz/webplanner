@@ -181,6 +181,30 @@ body {
 	transform: translateY(-1px);
 }
 
+.sort-row {
+	align-items: center;
+	justify-content: space-between;
+}
+
+.sort-row label {
+	font-weight: 600;
+	color: var(--text);
+}
+
+.sort-row select {
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	font: inherit;
+	background: #FFFFFF;
+	color: var(--text);
+}
+
+.sort-row select:focus {
+	outline: 2px solid #DDA15E;
+	border-color: var(--primary);
+}
+
 .todolist-item,
 .task-item {
 	padding: 8px;
@@ -239,6 +263,10 @@ body {
 	font-size: 12px;
 	color: var(--muted);
 	margin-left: 6px;
+}
+
+.task-due.overdue {
+	color: var(--danger);
 }
 
 .task-delete {

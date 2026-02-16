@@ -4,8 +4,8 @@ import { ensureApiAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Získání všech událostí
 router.get("/", ensureApiAuthenticated, async (req, res) => {
-  // Return all events for the authenticated user
   try {
     const events = await db.all(
       "SELECT id, title, start, end, all_day FROM events WHERE user_id = ? ORDER BY start ASC",
@@ -17,8 +17,8 @@ router.get("/", ensureApiAuthenticated, async (req, res) => {
   }
 });
 
+// Vytvoření nové události
 router.post("/", ensureApiAuthenticated, async (req, res) => {
-  // Create a new event for the authenticated user
   const { title, start, end, all_day } = req.body;
   if (!title || !title.trim() || !start) {
     return res.status(400).json({ error: "Title and start are required" });
@@ -41,8 +41,8 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
   }
 });
 
+// Aktualizace existující události
 router.put("/:id", ensureApiAuthenticated, async (req, res) => {
-  // Update an existing event (by id) for the authenticated user
   const { title, start, end, all_day } = req.body;
   if (!title || !title.trim() || !start) {
     return res.status(400).json({ error: "Title and start are required" });
@@ -69,8 +69,8 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
   }
 });
 
+// Odstranění události
 router.delete("/:id", ensureApiAuthenticated, async (req, res) => {
-  // Delete an existing event (by id) for the authenticated user
   try {
     const result = await db.run(
       "DELETE FROM events WHERE id = ? AND user_id = ?",

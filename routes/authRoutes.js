@@ -7,9 +7,28 @@ const router = express.Router();
 
 // Registrace nového uživatele
 router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, confirmPassword } = req.body;
 
   try {
+    // Ověření, zda jsou všechny potřebné údaje k dispozici a validní
+    if (typeof email !== "string" || email.trim().length === 0) {
+      req.flash("error", "Email is required.");
+      return res.redirect("/register");
+    }
+
+    if (typeof password !== "string" || password.trim().length === 0) {
+      req.flash("error", "Password is required.");
+      return res.redirect("/register");
+    }
+
+    if (
+      typeof confirmPassword !== "string" ||
+      confirmPassword.trim().length === 0
+    ) {
+      req.flash("error", "Please confirm your password.");
+      return res.redirect("/register");
+    }
+
     // Kontrola jestli uživatel s daným emailem již neexistuje
     const existingUser = await db.get(
       "SELECT id FROM users WHERE email = ?",
@@ -18,6 +37,18 @@ router.post("/register", async (req, res) => {
 
     if (existingUser) {
       req.flash("error", "Email already exists. Please use a different email.");
+      return res.redirect("/register");
+    }
+
+    // Ověření, zda se zadaná hesla shodují
+    if (password !== confirmPassword) {
+      req.flash("error", "Passwords do not match.");
+      return res.redirect("/register");
+    }
+
+    // Ověření délky hesla
+    if (password.length < 8) {
+      req.flash("error", "Password must be at least 8 characters long.");
       return res.redirect("/register");
     }
 

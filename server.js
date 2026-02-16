@@ -16,7 +16,7 @@ import {
 import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import todoRoutes from "./routes/todoRoutes.js";
-import passResetRoutes from "./routes/passResetRoutes.js";
+import passwordRoutes from "./routes/passwordRoutes.js";
 
 // Config
 dotenv.config();
@@ -35,7 +35,7 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 },
+    cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 den
   }),
 );
 
@@ -49,7 +49,7 @@ app.use(flash());
 app.use("/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/todo", todoRoutes);
-app.use("/password", passResetRoutes);
+app.use("/password", passwordRoutes);
 
 app.get("/", (req, res) => {
   if (req.isAuthenticated()) {

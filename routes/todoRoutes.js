@@ -4,6 +4,25 @@ import { ensureApiAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Pomocná funkce pro získání správného řazení úkolů (order by) na základě zadaného parametru sort
+function getTaskOrderBy(sort, fallbackOrderBy) {
+  // Prefix pro řazení dokončených úkolů vždy na konec, bez ohledu na zvolený způsob řazení
+  const completedPrefix = "is_completed ASC, ";
+
+  // Mapování hodnot parametru sort na odpovídající SQL řazení
+  const sortMap = {
+    title_asc: `${completedPrefix}title COLLATE NOCASE ASC`,
+    title_desc: `${completedPrefix}title COLLATE NOCASE DESC`,
+    due_asc: `${completedPrefix}due IS NULL, due ASC, title COLLATE NOCASE ASC`,
+    due_desc: `${completedPrefix}due IS NULL, due DESC, title COLLATE NOCASE ASC`,
+    created_asc: `${completedPrefix}created_at ASC`,
+    created_desc: `${completedPrefix}created_at DESC`,
+  };
+
+  // Vrácení odpovídajícího řazení z mapy nebo výchozího řazení, pokud není parametr sort zadán
+  return sortMap[sort] || fallbackOrderBy;
+}
+
 // Získání všech seznamů úkolů pro přihlášeného uživatele
 router.get("/lists", ensureApiAuthenticated, async (req, res) => {
   try {
@@ -57,6 +76,13 @@ router.get(
   ensureApiAuthenticated,
   async (req, res) => {
     try {
+      const orderBy = getTaskOrderBy(
+        req.query.sort,
+        // Používám query a ne parametry, protože se jedná o volitelný parametr pro řazení, který může být přítomen nebo ne
+        // Zatímco pro ID seznamu používám parametry, protože je povinný a musí být součástí URL
+        "is_completed ASC, due IS NULL, due ASC, title ASC",
+      );
+
       const list = await db.get(
         "SELECT id FROM task_lists WHERE id = ? AND user_id = ?",
         [req.params.taskListId, req.user.id],
@@ -66,7 +92,10 @@ router.get(
       }
 
       const tasks = await db.all(
-        "SELECT id, title, is_completed, due FROM tasks WHERE user_id = ? AND tasklist_id = ?",
+        `SELECT id, title, is_completed, due
+         FROM tasks
+         WHERE user_id = ? AND tasklist_id = ?
+         ORDER BY ${orderBy}`,
         [req.user.id, req.params.taskListId],
       );
       res.json(tasks);
@@ -111,18 +140,86 @@ router.post(
 );
 
 // Získání všech úkolů pro přihlášeného uživatele (napříč seznamy)
-router.get("/tasks", ensureApiAuthenticated, async (req, res) => {
+router.get("/alltasks", ensureApiAuthenticated, async (req, res) => {
   try {
+    const orderBy = getTaskOrderBy(
+      req.query.sort,
+      "is_completed ASC, due IS NULL, due ASC, title ASC",
+    );
+
     const tasks = await db.all(
       `SELECT id, title, is_completed, due, tasklist_id
        FROM tasks
        WHERE user_id = ?
-       ORDER BY due IS NULL, due ASC, title ASC`,
+       ORDER BY ${orderBy}`,
       [req.user.id],
     );
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch tasks" });
+  }
+});
+
+// Získání úkolů s termínem splnění na aktuální den
+router.get("/currentday", ensureApiAuthenticated, async (req, res) => {
+  try {
+    const orderBy = getTaskOrderBy(
+      req.query.sort,
+      "is_completed ASC, due ASC, title ASC",
+    );
+
+    const tasks = await db.all(
+      `SELECT id, title, is_completed, due, tasklist_id
+       FROM tasks
+       WHERE user_id = ? AND due = date('now', 'localtime')
+       ORDER BY ${orderBy}`,
+      [req.user.id],
+    );
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch current day tasks" });
+  }
+});
+
+// Získání prošlých úkolů (úkoly, které mají nastavené datum splnění, které je v minulosti a úkol není dokončený)
+router.get("/overdue", ensureApiAuthenticated, async (req, res) => {
+  try {
+    const orderBy = getTaskOrderBy(req.query.sort, "due ASC, title ASC");
+
+    const tasks = await db.all(
+      `SELECT id, title, is_completed, due, tasklist_id
+       FROM tasks
+       WHERE user_id = ?
+         AND due IS NOT NULL
+         AND due < date('now', 'localtime')
+         AND is_completed = 0
+       ORDER BY ${orderBy}`,
+      [req.user.id],
+    );
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch overdue tasks" });
+  }
+});
+
+// Získání dokončených úkolů
+router.get("/completed", ensureApiAuthenticated, async (req, res) => {
+  try {
+    const orderBy = getTaskOrderBy(
+      req.query.sort,
+      "due IS NULL, due ASC, title ASC",
+    );
+
+    const tasks = await db.all(
+      `SELECT id, title, is_completed, due, tasklist_id
+       FROM tasks
+       WHERE user_id = ? AND is_completed = 1
+       ORDER BY ${orderBy}`,
+      [req.user.id],
+    );
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch completed tasks" });
   }
 });
 
