@@ -49,11 +49,10 @@
             <div class="add-row sort-row">
                 <label for="task-sort">Sort by</label>
                 <select id="task-sort">
-                    <option value="default">Default</option>
-                    <option value="title_asc">Alphabetically (A-Z)</option>
-                    <option value="title_desc">Alphabetically (Z-A)</option>
                     <option value="due_asc">Due date (earliest first)</option>
                     <option value="due_desc">Due date (latest first)</option>
+                    <option value="title_asc">Alphabetically (A-Z)</option>
+                    <option value="title_desc">Alphabetically (Z-A)</option>
                     <option value="created_desc">Created at (newest first)</option>
                     <option value="created_asc">Created at (oldest first)</option>
                 </select>
@@ -88,6 +87,15 @@
             </div>
         </div>
     </div>
+
+    <div id="error-modal" class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="error-modal-title">
+            <h3 id="error-modal-title">Notice</h3>
+            <p id="error-modal-message"></p>
+            <button id="error-modal-close" type="button">OK</button>
+        </div>
+    </div>
+
     <script src="/js/todo.js"></script>
 </body>
 </html>

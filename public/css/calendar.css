@@ -200,14 +200,51 @@ body {
   color: var(--primary);
 }
 
-.event-feedback {
-  margin: 0 0 10px;
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-backdrop.active {
+  display: flex;
+}
+
+.modal {
+  width: min(90vw, 360px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 18px #DDA15E;
+}
+
+.modal h3 {
+  margin: 0 0 8px 0;
+}
+
+.modal p {
+  margin: 0 0 14px 0;
+  color: var(--text);
+}
+
+.modal button {
+  width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--accent);
+  background: var(--primary);
+  color: #fff;
+  border: none;
   border-radius: 8px;
-  background: var(--bg);
-  color: var(--accent);
-  font-size: 13px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.modal button:hover {
+  background: var(--accent);
 }
 
 .fc {
@@ -234,10 +271,18 @@ body {
   padding: 2px 6px;
   font-size: 12px;
   margin: 0;
+  white-space: nowrap;
 }
 
 .fc .fc-daygrid-event-harness {
   margin: 2px 2px;
+}
+
+.fc .fc-daygrid-event .fc-event-title,
+.fc .fc-daygrid-dot-event .fc-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fc .fc-daygrid-day-frame {

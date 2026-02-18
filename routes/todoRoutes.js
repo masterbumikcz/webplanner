@@ -80,7 +80,7 @@ router.get(
         req.query.sort,
         // Používám query a ne parametry, protože se jedná o volitelný parametr pro řazení, který může být přítomen nebo ne
         // Zatímco pro ID seznamu používám parametry, protože je povinný a musí být součástí URL
-        "is_completed ASC, due IS NULL, due ASC, title ASC",
+        "is_completed ASC, due IS NULL, due ASC, title COLLATE NOCASE ASC",
       );
 
       const list = await db.get(
@@ -144,7 +144,7 @@ router.get("/alltasks", ensureApiAuthenticated, async (req, res) => {
   try {
     const orderBy = getTaskOrderBy(
       req.query.sort,
-      "is_completed ASC, due IS NULL, due ASC, title ASC",
+      "is_completed ASC, due IS NULL, due ASC, title COLLATE NOCASE ASC",
     );
 
     const tasks = await db.all(
@@ -165,7 +165,7 @@ router.get("/currentday", ensureApiAuthenticated, async (req, res) => {
   try {
     const orderBy = getTaskOrderBy(
       req.query.sort,
-      "is_completed ASC, due ASC, title ASC",
+      "is_completed ASC, due ASC, title COLLATE NOCASE ASC",
     );
 
     const tasks = await db.all(
@@ -184,7 +184,10 @@ router.get("/currentday", ensureApiAuthenticated, async (req, res) => {
 // Získání prošlých úkolů (úkoly, které mají nastavené datum splnění, které je v minulosti a úkol není dokončený)
 router.get("/overdue", ensureApiAuthenticated, async (req, res) => {
   try {
-    const orderBy = getTaskOrderBy(req.query.sort, "due ASC, title ASC");
+    const orderBy = getTaskOrderBy(
+      req.query.sort,
+      "due ASC, title COLLATE NOCASE ASC",
+    );
 
     const tasks = await db.all(
       `SELECT id, title, is_completed, due, tasklist_id
@@ -207,7 +210,7 @@ router.get("/completed", ensureApiAuthenticated, async (req, res) => {
   try {
     const orderBy = getTaskOrderBy(
       req.query.sort,
-      "due IS NULL, due ASC, title ASC",
+      "due IS NULL, due ASC, title COLLATE NOCASE ASC",
     );
 
     const tasks = await db.all(

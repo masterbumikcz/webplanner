@@ -324,3 +324,50 @@ body {
 	background: var(--danger);
 	color: #fff;
 }
+
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal-backdrop.active {
+	display: flex;
+}
+
+.modal {
+	width: min(90vw, 360px);
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 16px;
+	box-shadow: 0 10px 18px #DDA15E;
+}
+
+.modal h3 {
+	margin: 0 0 8px 0;
+}
+
+.modal p {
+	margin: 0 0 14px 0;
+	color: var(--text);
+}
+
+.modal button {
+	width: 100%;
+	padding: 8px 10px;
+	background: var(--primary);
+	color: #fff;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font: inherit;
+}
+
+.modal button:hover {
+	background: var(--primary-dark);
+}

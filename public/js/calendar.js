@@ -11,48 +11,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveButton = document.getElementById("event-save");
   const deleteButton = document.getElementById("event-delete");
   const helperText = document.getElementById("event-helper");
-  const eventFeedback = document.getElementById("event-feedback");
+  const errorModal = document.getElementById("error-modal");
+  const errorModalMessage = document.getElementById("error-modal-message");
+  const errorModalClose = document.getElementById("error-modal-close");
 
   // Sleduje aktuálně vybranou událost (event) (null při vytváření nové)
   let selectedEvent = null;
 
-  // Vyčistí zpětnou vazbu pro uživatele
-  function clearFeedback() {
-    if (!eventFeedback) {
-      return;
-    }
-
-    eventFeedback.hidden = true;
-    eventFeedback.textContent = "";
+  // Error modal funkce pro zobrazení a skrytí chybových zpráv
+  function showErrorModal(message) {
+    errorModalMessage.textContent = message;
+    errorModal.classList.add("active");
   }
 
-  // Zobrazí zpětnou vazbu pro uživatele
-  function showFeedback(message) {
-    if (!eventFeedback) {
-      return;
-    }
+  errorModalClose.onclick = () => {
+    errorModal.classList.remove("active");
+  };
 
-    eventFeedback.textContent = message;
-    eventFeedback.hidden = false;
-  }
-
-  // Převod JavaScript Date objektu do formátu očekávaného datetime-local inputem
-  function toDateTimeInputValue(date) {
-    if (!date) return "";
-    return date.toISOString().slice(0, 16);
-  }
-
-  // Převod hodnot z datetime-local inputů do formátu očekávaného API (odstraní čas pro all-day události)
+  // Převod hodnot z inputů do formátu pro API (all-day normalizuje čas na 00:00)
   function toApiDateValue(value, allDay) {
     if (!value) return null;
-    return allDay ? value.split("T")[0] : value;
+    return allDay ? `${value.split("T")[0]}T00:00` : value;
   }
 
-  // Normalizuje API date strings do formátu očekávaného datetime-local inputem
-  function formatDateStringForInput(dateStr) {
-    if (!dateStr) return "";
+  // Převod hodnot z API do formátu pro datetime-local inputy (pokud chybí čas, doplní 00:00)
+  function toInputDateValue(value) {
+    if (!value) return "";
+    const dateStr = String(value);
     if (dateStr.includes("T")) {
-      return dateStr.slice(0, 16);
+      return dateStr;
     }
     return `${dateStr}T00:00`;
   }
@@ -76,11 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     selectedEvent = event;
     titleInput.value = event.title || "";
-    startInput.value =
-      formatDateStringForInput(event.startStr) ||
-      toDateTimeInputValue(event.start);
-    endInput.value =
-      formatDateStringForInput(event.endStr) || toDateTimeInputValue(event.end);
+    startInput.value = toInputDateValue(event.startStr);
+    endInput.value = toInputDateValue(event.endStr);
     allDayInput.checked = event.allDay;
     saveButton.disabled = false;
     deleteButton.disabled = false;
@@ -89,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Auto-toggle all-day off when a specific time is entered
+  // Automaticky vypne all-day, když je zadán konkrétní čas
   function syncAllDayWithTime() {
     if (!allDayInput.checked) return;
     const startTime = startInput.value.split("T")[1] || "";
@@ -102,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // When all-day is enabled, force time to 00:00
+  // Když je all-day povoleno, vynutí čas 00:00
   function normalizeAllDayTimes() {
     if (!allDayInput.checked) return;
     if (startInput.value.includes("T")) {
@@ -113,29 +97,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // FullCalendar configuration
+  // Konfigurace a inicializace FullCalendar
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridMonth",
     height: 700,
     expandRows: false,
     fixedWeekCount: true,
+    dayMaxEvents: true,
     headerToolbar: {
       left: "prev,next today",
       center: "title",
       right: "dayGridMonth,timeGridWeek,timeGridDay",
     },
-    // Prefill the editor when clicking a day cell
+    // Předvyplní editor při kliknutí na prázdnou buňku
     dateClick: (info) => {
-      clearFeedback();
       setEditorState(null);
-      startInput.value = formatDateStringForInput(info.dateStr);
+      startInput.value = toInputDateValue(info.dateStr);
       endInput.value = "";
       allDayInput.checked = info.allDay;
       titleInput.focus();
     },
-    // Load selected event into the editor
+    // Načte vybranou událost do editoru
     eventClick: (info) => {
-      clearFeedback();
       setEditorState(info.event);
     },
     editable: true,
@@ -155,10 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!res.ok) throw new Error("Failed to update event");
       } catch (error) {
         info.revert();
-        showFeedback("Error updating event");
+        showErrorModal("Error updating event");
       }
     },
-    // Fetch events from the API for the current view
+    // Načte události z API pro aktuální zobrazení
     events: async (info, successCallback, failureCallback) => {
       try {
         const res = await fetch("/api/events");
@@ -174,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
           })),
         );
       } catch (error) {
-        console.error("Error loading calendar events:", error);
+        showErrorModal("Unable to load calendar events. Please try again.");
         failureCallback(error);
       }
     },
@@ -182,35 +165,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   calendar.render();
 
-  startInput.addEventListener("input", () => {
-    clearFeedback();
+  const handleDateInputChange = () => {
     syncAllDayWithTime();
-  });
-  endInput.addEventListener("input", () => {
-    clearFeedback();
-    syncAllDayWithTime();
-  });
+  };
+
+  startInput.addEventListener("input", handleDateInputChange);
+  endInput.addEventListener("input", handleDateInputChange);
   allDayInput.addEventListener("change", () => {
-    clearFeedback();
     normalizeAllDayTimes();
   });
-  titleInput.addEventListener("input", clearFeedback);
 
-  // Save edits for the selected event
+  // Uložení úprav pro vybranou událost
   saveButton.addEventListener("click", async () => {
-    clearFeedback();
-
     if (!selectedEvent) {
-      showFeedback("Select an event first");
+      showErrorModal("Select an event first");
       return;
     }
-
     const trimmedTitle = titleInput.value.trim();
     if (!trimmedTitle) {
-      showFeedback("Title is required");
+      showErrorModal("Title is required");
       return;
     }
 
+    // Odeslání aktualizace na server
     try {
       const res = await fetch(`/api/events/${selectedEvent.id}`, {
         method: "PUT",
@@ -224,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       if (!res.ok) throw new Error("Failed to update event");
 
+      // Aktualizace události v kalendáři
       selectedEvent.setProp("title", trimmedTitle);
       if (startInput.value) {
         selectedEvent.setStart(
@@ -233,27 +211,25 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedEvent.setEnd(toApiDateValue(endInput.value, allDayInput.checked));
       selectedEvent.setAllDay(allDayInput.checked);
     } catch (error) {
-      showFeedback("Error updating event");
+      showErrorModal("Error updating event");
     }
   });
 
   // Vytvoření nové události
   addButton.addEventListener("click", async () => {
-    clearFeedback();
-
     const title = titleInput.value.trim();
     if (!title) {
-      showFeedback("Title is required");
+      showErrorModal("Title is required");
       return;
     }
 
     if (!startInput.value) {
-      showFeedback("Start date/time is required");
+      showErrorModal("Start date/time is required");
       return;
     }
 
     if (selectedEvent) {
-      showFeedback("Clear selection to add a new event");
+      showErrorModal("Clear selection to add a new event");
       return;
     }
 
@@ -276,16 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
       allDayInput.checked = true;
       calendar.refetchEvents();
     } catch (error) {
-      showFeedback("Error creating event");
+      showErrorModal("Error creating event");
     }
   });
 
   // Odstranění vybrané události
   deleteButton.addEventListener("click", async () => {
-    clearFeedback();
-
     if (!selectedEvent) {
-      showFeedback("Select an event first");
+      showErrorModal("Select an event first");
       return;
     }
 
@@ -298,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedEvent.remove();
       setEditorState(null);
     } catch (error) {
-      showFeedback("Error deleting event");
+      showErrorModal("Error deleting event");
     }
   });
 
