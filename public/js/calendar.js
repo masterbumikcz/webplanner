@@ -28,20 +28,24 @@ document.addEventListener("DOMContentLoaded", () => {
     errorModal.classList.remove("active");
   };
 
-  // Převod hodnot z inputů do formátu pro API (all-day normalizuje čas na 00:00)
-  function toApiDateValue(value, allDay) {
-    if (!value) return null;
-    return allDay ? `${value.split("T")[0]}T00:00` : value;
+  // Jednotný převod datumu do formátu YYYY-MM-DDTHH:mm
+  function formatDateValue(value, { allDay = false, returnNull = false } = {}) {
+    if (!value) return returnNull ? null : "";
+
+    const dateStr = String(value).trim().replace(" ", "T");
+    if (dateStr.length < 16) return `${dateStr.slice(0, 10)}T00:00`;
+    if (!dateStr.includes("T")) return returnNull ? null : "";
+
+    const normalized = dateStr.slice(0, 16);
+    return allDay ? `${normalized.slice(0, 10)}T00:00` : normalized;
   }
 
-  // Převod hodnot z API do formátu pro datetime-local inputy (pokud chybí čas, doplní 00:00)
-  function toInputDateValue(value) {
-    if (!value) return "";
-    const dateStr = String(value);
-    if (dateStr.includes("T")) {
-      return dateStr;
-    }
-    return `${dateStr}T00:00`;
+  function toInputValue(value) {
+    return formatDateValue(value);
+  }
+
+  function toApiValue(value, allDay) {
+    return formatDateValue(value, { allDay, returnNull: true });
   }
 
   // Naplní pravou stranu editoru podle vybraného události
@@ -63,8 +67,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     selectedEvent = event;
     titleInput.value = event.title || "";
-    startInput.value = toInputDateValue(event.startStr);
-    endInput.value = toInputDateValue(event.endStr);
+    startInput.value = toInputValue(event.startStr);
+    endInput.value = toInputValue(event.endStr);
     allDayInput.checked = event.allDay;
     saveButton.disabled = false;
     deleteButton.disabled = false;
@@ -100,6 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Konfigurace a inicializace FullCalendar
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridMonth",
+    timeZone: "local",
     height: 700,
     expandRows: false,
     fixedWeekCount: true,
@@ -112,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Předvyplní editor při kliknutí na prázdnou buňku
     dateClick: (info) => {
       setEditorState(null);
-      startInput.value = toInputDateValue(info.dateStr);
+      startInput.value = toInputValue(info.dateStr);
       endInput.value = "";
       allDayInput.checked = info.allDay;
       titleInput.focus();
@@ -125,13 +130,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // Uložit změny při přetažení události
     eventDrop: async (info) => {
       try {
+        const startValue = toApiValue(info.event.startStr, info.event.allDay);
+        const endValue = info.event.endStr
+          ? toApiValue(info.event.endStr, info.event.allDay)
+          : null;
+
         const res = await fetch(`/api/events/${info.event.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: info.event.title,
-            start: info.event.startStr,
-            end: info.event.endStr || null,
+            start: startValue,
+            end: endValue,
             all_day: info.event.allDay,
           }),
         });
@@ -151,8 +161,10 @@ document.addEventListener("DOMContentLoaded", () => {
           events.map((event) => ({
             id: event.id,
             title: event.title,
-            start: event.start,
-            end: event.end || null,
+            start: toApiValue(event.start, Boolean(event.all_day)),
+            end: event.end
+              ? toApiValue(event.end, Boolean(event.all_day))
+              : null,
             allDay: Boolean(event.all_day),
           })),
         );
@@ -194,8 +206,8 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: trimmedTitle,
-          start: toApiDateValue(startInput.value, allDayInput.checked),
-          end: toApiDateValue(endInput.value, allDayInput.checked),
+          start: toApiValue(startInput.value, allDayInput.checked),
+          end: toApiValue(endInput.value, allDayInput.checked),
           all_day: allDayInput.checked,
         }),
       });
@@ -205,10 +217,10 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedEvent.setProp("title", trimmedTitle);
       if (startInput.value) {
         selectedEvent.setStart(
-          toApiDateValue(startInput.value, allDayInput.checked),
+          toApiValue(startInput.value, allDayInput.checked),
         );
       }
-      selectedEvent.setEnd(toApiDateValue(endInput.value, allDayInput.checked));
+      selectedEvent.setEnd(toApiValue(endInput.value, allDayInput.checked));
       selectedEvent.setAllDay(allDayInput.checked);
     } catch (error) {
       showErrorModal("Error updating event");
@@ -239,8 +251,8 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          start: toApiDateValue(startInput.value, allDayInput.checked),
-          end: toApiDateValue(endInput.value, allDayInput.checked),
+          start: toApiValue(startInput.value, allDayInput.checked),
+          end: toApiValue(endInput.value, allDayInput.checked),
           all_day: allDayInput.checked,
         }),
       });
