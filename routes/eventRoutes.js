@@ -7,10 +7,11 @@ const router = express.Router();
 // Získání všech událostí
 router.get("/", ensureApiAuthenticated, async (req, res) => {
   try {
-    const events = await db.all(
-      "SELECT id, title, start, end, all_day FROM events WHERE user_id = ? ORDER BY start ASC",
-      req.user.id,
+    const eventsRes = await db.query(
+      "SELECT id, title, start_at AS start, end_at AS end, all_day FROM events WHERE user_id = $1 ORDER BY start_at ASC",
+      [req.user.id],
     );
+    const events = eventsRes.rows;
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch events" });
@@ -25,12 +26,12 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
   }
 
   try {
-    const result = await db.run(
-      "INSERT INTO events (user_id, title, start, end, all_day) VALUES (?, ?, ?, ?, ?)",
+    const result = await db.query(
+      "INSERT INTO events (user_id, title, start_at, end_at, all_day) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [req.user.id, title.trim(), start, end || null, all_day ? 1 : 0],
     );
     res.json({
-      id: result.lastID,
+      id: result.rows[0]?.id,
       title: title.trim(),
       start,
       end: end || null,
@@ -49,8 +50,8 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
   }
 
   try {
-    const result = await db.run(
-      "UPDATE events SET title = ?, start = ?, end = ?, all_day = ? WHERE id = ? AND user_id = ?",
+    const result = await db.query(
+      "UPDATE events SET title = $1, start_at = $2, end_at = $3, all_day = $4 WHERE id = $5 AND user_id = $6",
       [
         title.trim(),
         start,
@@ -60,7 +61,7 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
         req.user.id,
       ],
     );
-    if (result.changes === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ error: "Event not found" });
     }
     res.json({ success: true });
@@ -72,11 +73,11 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
 // Odstranění události
 router.delete("/:id", ensureApiAuthenticated, async (req, res) => {
   try {
-    const result = await db.run(
-      "DELETE FROM events WHERE id = ? AND user_id = ?",
+    const result = await db.query(
+      "DELETE FROM events WHERE id = $1 AND user_id = $2",
       [req.params.id, req.user.id],
     );
-    if (result.changes === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ error: "Event not found" });
     }
     res.json({ success: true });

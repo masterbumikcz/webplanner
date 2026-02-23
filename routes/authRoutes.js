@@ -30,10 +30,11 @@ router.post("/register", async (req, res) => {
     }
 
     // Kontrola jestli uživatel s daným emailem již neexistuje
-    const existingUser = await db.get(
-      "SELECT id FROM users WHERE email = ?",
-      email,
+    const existingUserRes = await db.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email],
     );
+    const existingUser = existingUserRes.rows[0];
 
     if (existingUser) {
       req.flash("error", "Email already exists. Please use a different email.");
@@ -56,10 +57,9 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Vložení nového uživatele se zaheshovaným heslem do databáze
-    await db.run(
-      `INSERT INTO users (email, password) VALUES (?, ?)`,
-      email,
-      hashedPassword,
+    await db.query(
+      "INSERT INTO users (email, password) VALUES ($1, $2)",
+      [email, hashedPassword],
     );
 
     req.flash("success", "Registration successful! Please login.");

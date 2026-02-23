@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo Lists</title>
-    <link rel="stylesheet" href="/css/todo.css"/>
+    <link rel="stylesheet" href="/css/todo.css" />
 </head>
+
 <body>
     <header class="header">
         <div class="header-content">
-            <h1>Todo</h1>
+            <h1>WebPlanner - Todo</h1>
             <nav class="nav-links">
                 <a href="/calendar">Calendar</a>
                 <form action="/auth/logout" method="POST" class="logout-form">
@@ -82,7 +84,14 @@
                 </div>
 
                 <div class="form-group">
-                    <button class="btn-save">Save Changes</button>
+                    <label for="task-reminder">Reminder (Email):</label>
+                    <input type="datetime-local" id="task-reminder">
+                    <button type="button" id="clear-reminder-btn" class="btn-clear">Clear reminder</button>
+                </div>
+
+                <div class="form-group task-actions">
+                    <button type="button" class="btn-save">Save Changes</button>
+                    <button type="button" id="delete-selected-task-btn" class="btn-delete">Delete Task</button>
                 </div>
             </div>
         </div>
@@ -98,4 +107,5 @@
 
     <script src="/js/todo.js"></script>
 </body>
+
 </html>

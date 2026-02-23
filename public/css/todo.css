@@ -315,6 +315,28 @@ body {
 	border-radius: 8px;
 }
 
+.task-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.task-actions button {
+	width: 100%;
+}
+
+.btn-clear {
+	margin-top: 8px;
+	background: var(--secondary);
+	color: #fff;
+	transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.btn-clear:hover {
+	background: var(--danger);
+	transform: translateY(-1px);
+}
+
 .btn-save {
 	background: var(--primary);
 	color: #fff;
@@ -323,6 +345,12 @@ body {
 .btn-delete {
 	background: var(--danger);
 	color: #fff;
+}
+
+.btn-save:hover,
+.btn-delete:hover {
+	filter: brightness(0.95);
+	transform: translateY(-1px);
 }
 
 .modal-backdrop {

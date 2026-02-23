@@ -20,9 +20,11 @@ router.post("/forgot-password", async (req, res) => {
 
   try {
     // Vyhledání uživatele podle e-mailu
-    const user = await db.get("SELECT id, email FROM users WHERE email = ?", [
-      email,
-    ]);
+    const userRes = await db.query(
+      "SELECT id, email FROM users WHERE email = $1",
+      [email],
+    );
+    const user = userRes.rows[0];
 
     if (user) {
       // Vytvoření tokenu pro reset hesla
@@ -32,9 +34,11 @@ router.post("/forgot-password", async (req, res) => {
       const expiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString();
 
       // Smazání předchozích tokenů pro daného uživatele a uložení nového tokenu do databáze (uložen je jako hash)
-      await db.run("DELETE FROM password_resets WHERE user_id = ?", [user.id]);
-      await db.run(
-        "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+      await db.query("DELETE FROM password_resets WHERE user_id = $1", [
+        user.id,
+      ]);
+      await db.query(
+        "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
         [user.id, tokenHash, expiresAt],
       );
 
@@ -97,10 +101,11 @@ router.get("/reset-password/:token", async (req, res) => {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // Vyhledání záznamu pro reset hesla podle hashe tokenu
-    const resetRow = await db.get(
-      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = ?",
+    const resetRes = await db.query(
+      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1",
       [tokenHash],
     );
+    const resetRow = resetRes.rows[0];
 
     // Ověření, zda token existuje nebo již nebyl použit
     if (!resetRow || resetRow.used_at) {
@@ -175,10 +180,11 @@ router.post("/reset-password", async (req, res) => {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // Vyhledání záznamu pro reset hesla podle hashe tokenu
-    const resetRow = await db.get(
-      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = ?",
+    const resetRes = await db.query(
+      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1",
       [tokenHash],
     );
+    const resetRow = resetRes.rows[0];
 
     // Ověření, zda token existuje nebo již nebyl použit
     if (!resetRow || resetRow.used_at) {
@@ -196,13 +202,13 @@ router.post("/reset-password", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Aktualizace hesla pro uživatele
-    await db.run("UPDATE users SET password = ? WHERE id = ?", [
+    await db.query("UPDATE users SET password = $1 WHERE id = $2", [
       hashedPassword,
       resetRow.user_id,
     ]);
     // Označení tokenu jako použitého
-    await db.run(
-      "UPDATE password_resets SET used_at = datetime('now') WHERE token_hash = ?",
+    await db.query(
+      "UPDATE password_resets SET used_at = NOW() WHERE token_hash = $1",
       [tokenHash],
     );
 

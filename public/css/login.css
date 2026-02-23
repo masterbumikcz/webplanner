@@ -21,11 +21,21 @@ body {
     font-family: "Segoe UI", Arial, sans-serif;
     background: var(--bg);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    flex-direction: column;
+    align-items: stretch; /* allow header to span full width */
+    justify-content: flex-start;
+    min-height: 100vh;
     margin: 0;
     color: var(--text);
+}
+
+.header {
+    width: 100%;
+}
+
+.card {
+    margin-top: 40px;
+    align-self: center; /* keep card centred despite stretch */
 }
 
 .card {
@@ -114,4 +124,22 @@ button:hover {
 .links a {
     color: #283618;
     text-decoration: none;
+}
+
+/* header styling copied from todo/calendar css */
+.header {
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    color: #fff;
+    padding: 8px 16px;
+    box-shadow: 0 10px 20px #DDA15E;
+}
+
+.header-content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }

@@ -1,6 +1,7 @@
 // Proměnné pro aktuálně vybraný seznam a úkol
 let currentList = null;
 let currentTaskId = null;
+let currentTask = null;
 let currentView = "list";
 let currentSort = "due_asc";
 const quickViewAllButton = document.getElementById("quick-view-all");
@@ -12,6 +13,11 @@ const quickViewCompletedButton = document.getElementById(
   "quick-view-completed",
 );
 const taskSortSelect = document.getElementById("task-sort");
+const taskReminderInput = document.getElementById("task-reminder");
+const clearReminderButton = document.getElementById("clear-reminder-btn");
+const deleteSelectedTaskButton = document.getElementById(
+  "delete-selected-task-btn",
+);
 const errorModal = document.getElementById("error-modal");
 const errorModalMessage = document.getElementById("error-modal-message");
 const errorModalClose = document.getElementById("error-modal-close");
@@ -26,9 +32,26 @@ errorModalClose.onclick = () => {
   errorModal.classList.remove("active");
 };
 
+function updateClearReminderVisibility() {
+  clearReminderButton.style.display = taskReminderInput.value
+    ? "block"
+    : "none";
+}
+
+taskReminderInput.addEventListener("input", updateClearReminderVisibility);
+
 setupQuickViews();
 setupTaskSort();
 loadTodolists();
+updateClearReminderVisibility();
+
+function getLocalDateString(dateInput = new Date()) {
+  const dateObj = new Date(dateInput);
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 // Nastavení možnosti řazení úkolů a načtení úkolů podle aktuálního řazení
 function setupTaskSort() {
@@ -140,8 +163,12 @@ function clearListSelection() {
 
 function clearTaskEditor() {
   // Vyčistí editor úkolu
+  currentTaskId = null;
+  currentTask = null;
   document.getElementById("task-title").value = "";
   document.getElementById("task-due").value = "";
+  taskReminderInput.value = "";
+  updateClearReminderVisibility();
   document
     .querySelectorAll(".task-item")
     .forEach((el) => el.classList.remove("active"));
@@ -199,7 +226,7 @@ async function loadTasksForView() {
       if (task.due && task.due < todayLocal && !task.is_completed) {
         due.classList.add("overdue");
       }
-      due.textContent = task.due ? `Due: ${task.due}` : "";
+      due.textContent = task.due ? `Due: ${getLocalDateString(task.due)}` : "";
 
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "task-delete";
@@ -230,10 +257,8 @@ async function deleteList(list) {
 
     if (currentList && currentList.id === list.id) {
       currentList = null;
-      currentTaskId = null;
       document.querySelector(".tasks-list").innerHTML = "";
-      document.getElementById("task-title").value = "";
-      document.getElementById("task-due").value = "";
+      clearTaskEditor();
     }
 
     loadTodolists();
@@ -255,13 +280,28 @@ function selectList(list, element) {
   loadTasksForView();
 }
 
-// Načtení úkolů pro vybraný seznam
-
 // Výběr úkolu pro úpravy
 function selectTask(task, element) {
+  currentTask = task;
   currentTaskId = task.id;
   document.getElementById("task-title").value = task.title;
-  document.getElementById("task-due").value = task.due || "";
+  document.getElementById("task-due").value = task.due
+    ? getLocalDateString(task.due)
+    : "";
+
+  let localRemindAt = "";
+  if (task.remind_at) {
+    const dateObj = new Date(task.remind_at);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const hours = String(dateObj.getHours()).padStart(2, "0");
+    const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+    localRemindAt = `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  taskReminderInput.value = localRemindAt;
+  updateClearReminderVisibility();
   document
     .querySelectorAll(".task-item")
     .forEach((el) => el.classList.remove("active"));
@@ -271,13 +311,11 @@ function selectTask(task, element) {
 // Přepnutí stavu dokončení úkolu (is_completed)
 async function toggleTask(task) {
   try {
-    await fetch(`/api/todo/tasks/${task.id}`, {
-      method: "PUT",
+    await fetch(`/api/todo/tasks/${task.id}/completed`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: task.title,
-        is_completed: task.is_completed ? 0 : 1,
-        due: task.due || null,
+        is_completed: !task.is_completed,
       }),
     });
     loadTasksForView();
@@ -288,7 +326,7 @@ async function toggleTask(task) {
 
 // Uložení změn úkolu
 document.querySelector(".btn-save").onclick = async () => {
-  if (!currentTaskId || !currentList) {
+  if (!currentTaskId) {
     showErrorModal("Select a task first");
     return;
   }
@@ -299,14 +337,19 @@ document.querySelector(".btn-save").onclick = async () => {
     return;
   }
 
+  const utcRemindAt = taskReminderInput.value
+    ? new Date(taskReminderInput.value).toISOString()
+    : null;
+
   try {
     await fetch(`/api/todo/tasks/${currentTaskId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: document.getElementById("task-title").value,
-        is_completed: 0,
-        due: document.getElementById("task-due").value,
+        is_completed: Boolean(currentTask.is_completed),
+        due: document.getElementById("task-due").value || null,
+        remind_at: utcRemindAt,
       }),
     });
     loadTasksForView();
@@ -325,14 +368,26 @@ async function deleteTask(task) {
     loadTasksForView();
 
     if (currentTaskId === task.id) {
-      currentTaskId = null;
-      document.getElementById("task-title").value = "";
-      document.getElementById("task-due").value = "";
+      clearTaskEditor();
     }
   } catch (err) {
     showErrorModal("Error deleting task");
   }
 }
+
+clearReminderButton.onclick = () => {
+  taskReminderInput.value = "";
+  updateClearReminderVisibility();
+};
+
+deleteSelectedTaskButton.onclick = async () => {
+  if (!currentTask) {
+    showErrorModal("Select a task first");
+    return;
+  }
+
+  await deleteTask(currentTask);
+};
 
 // Přidání nového úkolu
 document.getElementById("add-task-btn").onclick = async () => {
@@ -349,7 +404,7 @@ document.getElementById("add-task-btn").onclick = async () => {
     await fetch(`/api/todo/lists/${currentList.id}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, due: null }),
+      body: JSON.stringify({ title }),
     });
 
     input.value = "";

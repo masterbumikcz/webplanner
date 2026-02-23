@@ -7,10 +7,11 @@ function configurePassport(passport, db) {
       { usernameField: "email" },
       async (email, password, done) => {
         try {
-          const user = await db.get(
-            "SELECT * FROM users WHERE email = ?",
-            email,
+          const userRes = await db.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email],
           );
+          const user = userRes.rows[0];
           if (!user)
             return done(null, false, { message: "No user with that email" });
 
@@ -32,8 +33,11 @@ function configurePassport(passport, db) {
 
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await db.get("SELECT id, email FROM users WHERE id = ?", id);
-      done(null, user || false);
+      const userRes = await db.query(
+        "SELECT id, email FROM users WHERE id = $1",
+        [id],
+      );
+      done(null, userRes.rows[0] || false);
     } catch (err) {
       done(err);
     }
