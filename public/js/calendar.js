@@ -28,24 +28,72 @@ document.addEventListener("DOMContentLoaded", () => {
     errorModal.classList.remove("active");
   };
 
-  // Jednotný převod datumu do formátu YYYY-MM-DDTHH:mm
-  function formatDateValue(value, { allDay = false, returnNull = false } = {}) {
-    if (!value) return returnNull ? null : "";
-
-    const dateStr = String(value).trim().replace(" ", "T");
-    if (dateStr.length < 16) return `${dateStr.slice(0, 10)}T00:00`;
-    if (!dateStr.includes("T")) return returnNull ? null : "";
-
-    const normalized = dateStr.slice(0, 16);
-    return allDay ? `${normalized.slice(0, 10)}T00:00` : normalized;
+  function localDateTimeToUtcIso(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
-  function toInputValue(value) {
-    return formatDateValue(value);
+  function utcIsoToLocalDateTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  function toInputValue(value, allDay = false) {
+    if (!value) return "";
+    if (allDay) {
+      const datePart = String(value).trim().split("T")[0];
+      return `${datePart}T00:00`;
+    }
+    return utcIsoToLocalDateTime(value);
   }
 
   function toApiValue(value, allDay) {
-    return formatDateValue(value, { allDay, returnNull: true });
+    if (!value) return null;
+    if (allDay) {
+      return String(value).trim().split("T")[0];
+    }
+    return localDateTimeToUtcIso(value);
+  }
+
+  async function fetchCalendarEvents() {
+    const response = await fetch("/api/events");
+    if (!response.ok) throw new Error("Failed to load events");
+    return response.json();
+  }
+
+  async function createCalendarEvent(payload) {
+    const response = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error("Failed to create event");
+  }
+
+  async function updateCalendarEvent(eventId, payload) {
+    const response = await fetch(`/api/events/${eventId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error("Failed to update event");
+  }
+
+  async function deleteCalendarEvent(eventId) {
+    const response = await fetch(`/api/events/${eventId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete event");
   }
 
   // Naplní pravou stranu editoru podle vybraného události
@@ -67,8 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     selectedEvent = event;
     titleInput.value = event.title || "";
-    startInput.value = toInputValue(event.startStr);
-    endInput.value = toInputValue(event.endStr);
+    startInput.value = toInputValue(event.startStr, event.allDay);
+    endInput.value = toInputValue(event.endStr, event.allDay);
     allDayInput.checked = event.allDay;
     saveButton.disabled = false;
     deleteButton.disabled = false;
@@ -117,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Předvyplní editor při kliknutí na prázdnou buňku
     dateClick: (info) => {
       setEditorState(null);
-      startInput.value = toInputValue(info.dateStr);
+      startInput.value = toInputValue(info.dateStr, info.allDay);
       endInput.value = "";
       allDayInput.checked = info.allDay;
       titleInput.focus();
@@ -131,21 +179,14 @@ document.addEventListener("DOMContentLoaded", () => {
     eventDrop: async (info) => {
       try {
         const startValue = toApiValue(info.event.startStr, info.event.allDay);
-        const endValue = info.event.endStr
-          ? toApiValue(info.event.endStr, info.event.allDay)
-          : null;
+        const endValue = toApiValue(info.event.endStr, info.event.allDay);
 
-        const res = await fetch(`/api/events/${info.event.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: info.event.title,
-            start: startValue,
-            end: endValue,
-            all_day: info.event.allDay,
-          }),
+        await updateCalendarEvent(info.event.id, {
+          title: info.event.title,
+          start: startValue,
+          end: endValue,
+          all_day: info.event.allDay,
         });
-        if (!res.ok) throw new Error("Failed to update event");
       } catch (error) {
         info.revert();
         showErrorModal("Error updating event");
@@ -154,17 +195,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Načte události z API pro aktuální zobrazení
     events: async (info, successCallback, failureCallback) => {
       try {
-        const res = await fetch("/api/events");
-        if (!res.ok) throw new Error("Failed to load events");
-        const events = await res.json();
+        const events = await fetchCalendarEvents();
         successCallback(
           events.map((event) => ({
             id: event.id,
             title: event.title,
-            start: toApiValue(event.start, Boolean(event.all_day)),
-            end: event.end
-              ? toApiValue(event.end, Boolean(event.all_day))
-              : null,
+            start: event.start,
+            end: event.end || null,
             allDay: Boolean(event.all_day),
           })),
         );
@@ -201,17 +238,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Odeslání aktualizace na server
     try {
-      const res = await fetch(`/api/events/${selectedEvent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: trimmedTitle,
-          start: toApiValue(startInput.value, allDayInput.checked),
-          end: toApiValue(endInput.value, allDayInput.checked),
-          all_day: allDayInput.checked,
-        }),
+      await updateCalendarEvent(selectedEvent.id, {
+        title: trimmedTitle,
+        start: toApiValue(startInput.value, allDayInput.checked),
+        end: toApiValue(endInput.value, allDayInput.checked),
+        all_day: Boolean(allDayInput.checked),
       });
-      if (!res.ok) throw new Error("Failed to update event");
 
       // Aktualizace události v kalendáři
       selectedEvent.setProp("title", trimmedTitle);
@@ -246,17 +278,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          start: toApiValue(startInput.value, allDayInput.checked),
-          end: toApiValue(endInput.value, allDayInput.checked),
-          all_day: allDayInput.checked,
-        }),
+      await createCalendarEvent({
+        title,
+        start: toApiValue(startInput.value, allDayInput.checked),
+        end: toApiValue(endInput.value, allDayInput.checked),
+        all_day: allDayInput.checked,
       });
-      if (!res.ok) throw new Error("Failed to create event");
 
       titleInput.value = "";
       startInput.value = "";
@@ -276,10 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch(`/api/events/${selectedEvent.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete event");
+      await deleteCalendarEvent(selectedEvent.id);
 
       selectedEvent.remove();
       setEditorState(null);

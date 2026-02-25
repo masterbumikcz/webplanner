@@ -1,9 +1,11 @@
-// Proměnné pro aktuálně vybraný seznam a úkol
-let currentList = null;
-let currentTaskId = null;
-let currentTask = null;
+// Proměnné pro uchování stavu aplikace
+let selectedList = null;
+let selectedTaskId = null;
+let selectedTask = null;
 let currentView = "list";
 let currentSort = "due_asc";
+
+// DOM elementy pro interakci s uživatelem
 const quickViewAllButton = document.getElementById("quick-view-all");
 const quickViewCurrentDayButton = document.getElementById(
   "quick-view-current-day",
@@ -18,11 +20,20 @@ const clearReminderButton = document.getElementById("clear-reminder-btn");
 const deleteSelectedTaskButton = document.getElementById(
   "delete-selected-task-btn",
 );
+const taskTitleInput = document.getElementById("task-title");
+const taskDueInput = document.getElementById("task-due");
+const newTaskInput = document.getElementById("task-title-input");
+const newTasklistInput = document.getElementById("tasklist-title");
+const taskListContainer = document.getElementById("tasks-list");
+const todolistsContainer = document.getElementById("todolists-list");
+const saveTaskButton = document.getElementById("save-task-btn");
+const addTaskButton = document.getElementById("add-task-btn");
+const addTasklistButton = document.getElementById("add-tasklist-btn");
 const errorModal = document.getElementById("error-modal");
 const errorModalMessage = document.getElementById("error-modal-message");
 const errorModalClose = document.getElementById("error-modal-close");
 
-// Error modal funkce pro zobrazení a skrytí chybových zpráv
+// Funkce pro zobrazení chybového modalu s danou zprávou
 function showErrorModal(message) {
   errorModalMessage.textContent = message;
   errorModal.classList.add("active");
@@ -38,22 +49,39 @@ function updateClearReminderVisibility() {
     : "none";
 }
 
-taskReminderInput.addEventListener("input", updateClearReminderVisibility);
-
-setupQuickViews();
-setupTaskSort();
-loadTodolists();
-updateClearReminderVisibility();
-
-function getLocalDateString(dateInput = new Date()) {
+// Funkce pro převod z UTC ISO formátu do lokálního formátu pro input typu date
+function toLocalDateString(dateInput = new Date()) {
   const dateObj = new Date(dateInput);
+  if (Number.isNaN(dateObj.getTime())) return "";
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const day = String(dateObj.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-// Nastavení možnosti řazení úkolů a načtení úkolů podle aktuálního řazení
+// Funkce pro převod z utc ISO formátu do lokálního formátu pro input typu datetime-local
+function utcIsoToLocalDateTime(dateInput) {
+  if (!dateInput) return "";
+  const dateObj = new Date(dateInput);
+  if (Number.isNaN(dateObj.getTime())) return "";
+
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const hours = String(dateObj.getHours()).padStart(2, "0");
+  const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Funkce pro převod z lokálního formátu pro input typu datetime-local do UTC ISO formátu
+function localDateTimeToUtcIso(value) {
+  if (!value) return null;
+  const dateObj = new Date(value);
+  return Number.isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
+}
+
+// Funkce pro získání správného řazení úkolů pro API na základě zvoleného řazení v UI
 function setupTaskSort() {
   if (!taskSortSelect) {
     return;
@@ -69,10 +97,10 @@ function setupTaskSort() {
 // Načtení seznamů úkolů ze serveru
 async function loadTodolists() {
   try {
-    const res = await fetch("/api/todo/lists");
-    const lists = await res.json();
-    const listContainer = document.querySelector(".todolists-list");
-    listContainer.innerHTML = "";
+    const response = await fetch("/api/todo/lists");
+    if (!response.ok) throw new Error("Failed to load lists");
+    const lists = await response.json();
+    todolistsContainer.innerHTML = "";
 
     if (!lists || lists.length === 0) {
       return;
@@ -97,9 +125,9 @@ async function loadTodolists() {
       div.onclick = () => selectList(list, div);
       div.appendChild(title);
       div.appendChild(deleteBtn);
-      listContainer.appendChild(div);
+      todolistsContainer.appendChild(div);
     });
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error loading lists");
   }
 }
@@ -126,24 +154,24 @@ function setupQuickViews() {
 // Nastavení aktuálního rychlého pohledu a načtení úkolů pro tento pohled
 function setQuickView(view) {
   currentView = view;
-  currentList = null;
-  currentTaskId = null;
+  selectedList = null;
+  selectedTaskId = null;
   clearListSelection();
   clearTaskEditor();
   updateQuickViewActive(view);
 
-  if (
+  const shouldLoadTasks =
     view === "all" ||
     view === "currentDay" ||
     view === "overdue" ||
-    view === "completed"
-  ) {
-    // Načte všechny úkoly napříč seznamy
+    view === "completed";
+
+  if (shouldLoadTasks) {
     loadTasksForView();
-  } else {
-    // Vyčistí zobrazení úkolů pokud není vybrán žádný pohled
-    document.querySelector(".tasks-list").innerHTML = "";
+    return;
   }
+
+  taskListContainer.innerHTML = "";
 }
 
 function updateQuickViewActive(view) {
@@ -163,10 +191,10 @@ function clearListSelection() {
 
 function clearTaskEditor() {
   // Vyčistí editor úkolu
-  currentTaskId = null;
-  currentTask = null;
-  document.getElementById("task-title").value = "";
-  document.getElementById("task-due").value = "";
+  selectedTaskId = null;
+  selectedTask = null;
+  taskTitleInput.value = "";
+  taskDueInput.value = "";
   taskReminderInput.value = "";
   updateClearReminderVisibility();
   document
@@ -179,30 +207,30 @@ async function loadTasksForView() {
   try {
     // Sestaví URL pro načtení úkolů podle aktuálního pohledu
     const viewEndpointMap = {
-      list: currentList ? `/api/todo/lists/${currentList.id}/tasks` : null,
+      list: selectedList ? `/api/todo/lists/${selectedList.id}/tasks` : null,
       all: "/api/todo/alltasks",
       currentDay: "/api/todo/currentday",
       overdue: "/api/todo/overdue",
       completed: "/api/todo/completed",
     };
 
-    let url = viewEndpointMap[currentView] || null;
+    const url = viewEndpointMap[currentView] || null;
 
     if (!url) {
       return;
     }
 
     // Nastavení řazení úkolů jako query parametr pro API
-    url = `${url}?sort=${encodeURIComponent(currentSort)}`;
+    const urlWithSort = `${url}?sort=${encodeURIComponent(currentSort)}`;
 
     // Načtení úkolů z API
-    const res = await fetch(url);
-    const tasks = await res.json();
-    const taskContainer = document.querySelector(".tasks-list");
+    const response = await fetch(urlWithSort);
+    if (!response.ok) throw new Error("Failed to load tasks");
+    const tasks = await response.json();
 
     // Vyčistí zobrazení úkolů a zobrazí načtené úkoly
-    taskContainer.innerHTML = "";
-    const todayLocal = new Date().toISOString().slice(0, 10);
+    taskListContainer.innerHTML = "";
+    const todayLocal = toLocalDateString();
 
     tasks.forEach((task) => {
       const div = document.createElement("div");
@@ -223,10 +251,14 @@ async function loadTasksForView() {
 
       const due = document.createElement("span");
       due.className = "task-due";
-      if (task.due && task.due < todayLocal && !task.is_completed) {
+      if (
+        task.due &&
+        toLocalDateString(task.due) < todayLocal &&
+        !task.is_completed
+      ) {
         due.classList.add("overdue");
       }
-      due.textContent = task.due ? `Due: ${getLocalDateString(task.due)}` : "";
+      due.textContent = task.due ? `Due: ${toLocalDateString(task.due)}` : "";
 
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "task-delete";
@@ -243,9 +275,9 @@ async function loadTasksForView() {
         div.appendChild(due);
       }
       div.appendChild(deleteBtn);
-      taskContainer.appendChild(div);
+      taskListContainer.appendChild(div);
     });
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error loading tasks");
   }
 }
@@ -253,23 +285,26 @@ async function loadTasksForView() {
 // Odstranění seznamu
 async function deleteList(list) {
   try {
-    await fetch(`/api/todo/lists/${list.id}`, { method: "DELETE" });
+    const response = await fetch(`/api/todo/lists/${list.id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete list");
 
-    if (currentList && currentList.id === list.id) {
-      currentList = null;
-      document.querySelector(".tasks-list").innerHTML = "";
+    if (selectedList && selectedList.id === list.id) {
+      selectedList = null;
+      taskListContainer.innerHTML = "";
       clearTaskEditor();
     }
 
     loadTodolists();
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error deleting list");
   }
 }
 
 // Výběr seznamu úkolů a načtení jeho úkolů
 function selectList(list, element) {
-  currentList = list;
+  selectedList = list;
   currentView = "list";
   updateQuickViewActive(null);
   clearTaskEditor();
@@ -282,25 +317,11 @@ function selectList(list, element) {
 
 // Výběr úkolu pro úpravy
 function selectTask(task, element) {
-  currentTask = task;
-  currentTaskId = task.id;
-  document.getElementById("task-title").value = task.title;
-  document.getElementById("task-due").value = task.due
-    ? getLocalDateString(task.due)
-    : "";
-
-  let localRemindAt = "";
-  if (task.remind_at) {
-    const dateObj = new Date(task.remind_at);
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    const hours = String(dateObj.getHours()).padStart(2, "0");
-    const minutes = String(dateObj.getMinutes()).padStart(2, "0");
-    localRemindAt = `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-
-  taskReminderInput.value = localRemindAt;
+  selectedTask = task;
+  selectedTaskId = task.id;
+  taskTitleInput.value = task.title;
+  taskDueInput.value = task.due ? toLocalDateString(task.due) : "";
+  taskReminderInput.value = utcIsoToLocalDateTime(task.remind_at);
   updateClearReminderVisibility();
   document
     .querySelectorAll(".task-item")
@@ -311,49 +332,49 @@ function selectTask(task, element) {
 // Přepnutí stavu dokončení úkolu (is_completed)
 async function toggleTask(task) {
   try {
-    await fetch(`/api/todo/tasks/${task.id}/completed`, {
+    const response = await fetch(`/api/todo/tasks/${task.id}/completed`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         is_completed: !task.is_completed,
       }),
     });
+    if (!response.ok) throw new Error("Failed to update task");
     loadTasksForView();
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error updating task");
   }
 }
 
 // Uložení změn úkolu
-document.querySelector(".btn-save").onclick = async () => {
-  if (!currentTaskId) {
+saveTaskButton.onclick = async () => {
+  if (!selectedTaskId) {
     showErrorModal("Select a task first");
     return;
   }
 
-  const title = document.getElementById("task-title").value.trim();
+  const title = taskTitleInput.value.trim();
   if (!title) {
     showErrorModal("Task title is required");
     return;
   }
 
-  const utcRemindAt = taskReminderInput.value
-    ? new Date(taskReminderInput.value).toISOString()
-    : null;
+  const utcRemindAt = localDateTimeToUtcIso(taskReminderInput.value);
 
   try {
-    await fetch(`/api/todo/tasks/${currentTaskId}`, {
+    const response = await fetch(`/api/todo/tasks/${selectedTaskId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: document.getElementById("task-title").value,
-        is_completed: Boolean(currentTask.is_completed),
-        due: document.getElementById("task-due").value || null,
+        title,
+        is_completed: Boolean(selectedTask.is_completed),
+        due: taskDueInput.value || null,
         remind_at: utcRemindAt,
       }),
     });
+    if (!response.ok) throw new Error("Failed to save task");
     loadTasksForView();
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error saving task");
   }
 };
@@ -364,13 +385,16 @@ async function deleteTask(task) {
   //if (!confirm("Delete this task?")) return;
 
   try {
-    await fetch(`/api/todo/tasks/${task.id}`, { method: "DELETE" });
+    const response = await fetch(`/api/todo/tasks/${task.id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete task");
     loadTasksForView();
 
-    if (currentTaskId === task.id) {
+    if (selectedTaskId === task.id) {
       clearTaskEditor();
     }
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error deleting task");
   }
 }
@@ -381,55 +405,65 @@ clearReminderButton.onclick = () => {
 };
 
 deleteSelectedTaskButton.onclick = async () => {
-  if (!currentTask) {
+  if (!selectedTask) {
     showErrorModal("Select a task first");
     return;
   }
 
-  await deleteTask(currentTask);
+  await deleteTask(selectedTask);
 };
 
 // Přidání nového úkolu
-document.getElementById("add-task-btn").onclick = async () => {
-  if (!currentList) {
+addTaskButton.onclick = async () => {
+  if (!selectedList) {
     showErrorModal("Select a list first");
     return;
   }
 
-  const input = document.getElementById("task-title-input");
-  const title = input.value.trim();
+  const title = newTaskInput.value.trim();
   if (!title) return;
 
   try {
-    await fetch(`/api/todo/lists/${currentList.id}/tasks`, {
+    const response = await fetch(`/api/todo/lists/${selectedList.id}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
+    if (!response.ok) throw new Error("Failed to add task");
 
-    input.value = "";
+    newTaskInput.value = "";
     loadTasksForView();
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error adding task");
   }
 };
 
 // Přidání nového seznamu úkolů
-document.getElementById("add-tasklist-btn").onclick = async () => {
-  const input = document.getElementById("tasklist-title");
-  const title = input.value.trim();
+addTasklistButton.onclick = async () => {
+  const title = newTasklistInput.value.trim();
   if (!title) return;
 
   try {
-    await fetch("/api/todo/lists", {
+    const response = await fetch("/api/todo/lists", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
+    if (!response.ok) throw new Error("Failed to add list");
 
-    input.value = "";
+    newTasklistInput.value = "";
     loadTodolists();
-  } catch (err) {
+  } catch (error) {
     showErrorModal("Error adding list");
   }
 };
+
+function initTodo() {
+  taskReminderInput.addEventListener("input", updateClearReminderVisibility);
+  setupQuickViews();
+  setupTaskSort();
+  loadTodolists();
+  updateClearReminderVisibility();
+}
+
+initTodo();

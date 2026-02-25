@@ -1,0 +1,108 @@
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+}
+
+.nav-links {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-links a,
+.logout-form .logout {
+    color: #FEFAE0;
+    background: #606C38;
+    text-decoration: none;
+    padding: 6px 10px;
+    border: 1px solid #283618;
+    border-radius: 8px;
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nav-links a:hover,
+.logout-form .logout:hover {
+    background: #BC6C25;
+    transform: translateY(-1px);
+}
+
+.logout-form {
+    margin: 0;
+}
+
+.logout-form .logout {
+    background: #283618;
+    color: #FEFAE0;
+    padding: 6px 10px;
+    border: 1px solid #283618;
+    border-radius: 8px;
+    width: auto;
+    margin-top: 0;
+    box-shadow: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.logout-form .logout:hover {
+    box-shadow: none;
+}
+
+.settings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    padding: 28px 20px 40px;
+}
+
+.settings-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 14px 26px rgba(221, 161, 94, 0.35);
+}
+
+.settings-card h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 20px;
+}
+
+.helper-text {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.danger-card {
+    border-color: #d99a55;
+    background: linear-gradient(135deg, #fff7e4 0%, #ffffff 60%);
+}
+
+.danger-button {
+    background: linear-gradient(90deg, #BC6C25 0%, #9b4f16 100%);
+}
+
+.danger-button:hover {
+    box-shadow: 0 10px 20px rgba(188, 108, 37, 0.35);
+}
+
+.danger-note {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #fff0db;
+    border: 1px solid #f0c38b;
+    font-size: 13px;
+}
+
+@media (max-width: 720px) {
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+}

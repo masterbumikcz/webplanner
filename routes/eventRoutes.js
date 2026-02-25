@@ -28,14 +28,14 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
   try {
     const result = await db.query(
       "INSERT INTO events (user_id, title, start_at, end_at, all_day) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-      [req.user.id, title.trim(), start, end || null, all_day ? 1 : 0],
+      [req.user.id, title.trim(), start, end || null, Boolean(all_day)],
     );
     res.json({
       id: result.rows[0]?.id,
       title: title.trim(),
       start,
       end: end || null,
-      all_day: all_day ? 1 : 0,
+      all_day: Boolean(all_day),
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to create event" });

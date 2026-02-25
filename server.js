@@ -72,6 +72,10 @@ app.get("/forgot-password", (req, res) => {
   res.sendFile(join(__dirname, "public", "forgotpassword.html"));
 });
 
+app.get("/settings", ensureAuthenticated, (req, res) => {
+  res.sendFile(join(__dirname, "public", "settings.html"));
+});
+
 app.get("/api/messages", (req, res) => {
   const messages = req.flash();
   res.json(messages);
@@ -96,6 +100,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_PASS,
   },
 });
+
+function formatDueDate(due) {
+  if (!due) return "";
+  const dateObj = new Date(due);
+  const formattedDate = `${dateObj.getUTCDate()}.${dateObj.getUTCMonth() + 1}.${dateObj.getUTCFullYear()}`;
+  return formattedDate;
+}
 
 // Cron job pro kontrolu úkolů, které mají nastavené připomenutí, a odeslání e-mailu ve chvíli remind_at
 cron.schedule("* * * * *", async () => {
@@ -130,8 +141,8 @@ cron.schedule("* * * * *", async () => {
         const mailOptions = {
           from: process.env.GMAIL_USER,
           to: user.email,
-          subject: "Webplanner task Reminder: " + task.title,
-          text: `This is a reminder for your task "${task.title}".${task.due ? ` Due date: ${task.due}.` : ""}`,
+          subject: "Webplanner task reminder: " + task.title,
+          text: `This is a reminder for your task "${task.title}".${task.due ? ` Due date: ${formatDueDate(task.due)}.` : ""}`,
         };
         try {
           const info = await transporter.sendMail(mailOptions);

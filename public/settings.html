@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Settings</title>
+	<link rel="stylesheet" href="/css/forms.css" />
+	<link rel="stylesheet" href="/css/settings.css" />
+</head>
+
+<body>
+	<header class="header">
+		<div class="header-content">
+			<h1>WebPlanner - Settings</h1>
+			<nav class="nav-links">
+				<a href="/todo">Todo</a>
+				<a href="/calendar">Calendar</a>
+				<form action="/auth/logout" method="POST" class="logout-form">
+					<button type="submit" class="logout">Logout</button>
+				</form>
+			</nav>
+		</div>
+	</header>
+
+	<main class="settings-container">
+		<div class="settings-card">
+			<h2>Change Password</h2>
+			<p class="helper-text">Choose a strong password you do not use elsewhere.</p>
+			<div id="message-box" class="messages"></div>
+			<form action="/settings/change-password" method="POST">
+				<label for="current-password">Current password</label>
+				<input type="password" id="current-password" name="currentPassword" autocomplete="current-password">
+
+				<label for="new-password">New password</label>
+				<input type="password" id="new-password" name="newPassword" autocomplete="new-password">
+
+				<label for="confirm-password">Confirm new password</label>
+				<input type="password" id="confirm-password" name="confirmPassword" autocomplete="new-password">
+
+				<button type="submit">Update password</button>
+			</form>
+		</div>
+
+		<div class="settings-card danger-card">
+			<h2>Delete Account</h2>
+			<p class="helper-text">
+				We will send a confirmation email with a token. Your account will be deleted only after you confirm it.
+			</p>
+			<form action="/settings/request-delete" method="POST">
+				<label for="delete-email">Confirm your email</label>
+				<input type="email" id="delete-email" name="email" placeholder="you@example.com">
+
+				<button type="submit" class="danger-button">Send deletion email</button>
+			</form>
+			<div class="danger-note">
+				<strong>Warning:</strong> This action is irreversible once confirmed.
+			</div>
+		</div>
+	</main>
+
+	<script src="/js/messages.js"></script>
+</body>
+
+</html>

@@ -14,6 +14,7 @@
             <h1>WebPlanner - Todo</h1>
             <nav class="nav-links">
                 <a href="/calendar">Calendar</a>
+                <a href="/settings">Settings</a>
                 <form action="/auth/logout" method="POST" class="logout-form">
                     <button type="submit" class="logout">Logout</button>
                 </form>
@@ -39,7 +40,7 @@
                 <input type="text" id="tasklist-title" placeholder="New list">
                 <button id="add-tasklist-btn">Add</button>
             </div>
-            <div class="todolists-list">
+            <div id="todolists-list" class="todolists-list">
             </div>
         </div>
 
@@ -63,7 +64,7 @@
                 <input type="text" id="task-title-input" placeholder="New task">
                 <button id="add-task-btn">Add</button>
             </div>
-            <div class="tasks-list">
+            <div id="tasks-list" class="tasks-list">
             </div>
         </div>
 
@@ -90,7 +91,7 @@
                 </div>
 
                 <div class="form-group task-actions">
-                    <button type="button" class="btn-save">Save Changes</button>
+                    <button type="button" id="save-task-btn" class="btn-save">Save Changes</button>
                     <button type="button" id="delete-selected-task-btn" class="btn-delete">Delete Task</button>
                 </div>
             </div>
