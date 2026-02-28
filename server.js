@@ -16,7 +16,7 @@ import {
   ensureNotAuthenticated,
 } from "./middleware/authMiddleware.js";
 import authRoutes from "./routes/authRoutes.js";
-import eventRoutes from "./routes/eventRoutes.js";
+import calendarRoutes from "./routes/calendarRoutes.js";
 import todoRoutes from "./routes/todoRoutes.js";
 import passwordRoutes from "./routes/passwordRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
@@ -66,7 +66,7 @@ app.use(flash());
 
 // Routes
 app.use("/auth", authRoutes);
-app.use("/api/events", eventRoutes);
+app.use("/api/calendar", calendarRoutes);
 app.use("/api/todo", todoRoutes);
 app.use("/password", passwordRoutes);
 app.use("/settings", settingsRoutes);

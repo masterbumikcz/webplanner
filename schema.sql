@@ -1,8 +1,7 @@
-
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL
+  password TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -29,7 +28,7 @@ CREATE TABLE account_deletions (
   expires_at TIMESTAMPTZ NOT NULL,
   used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
 
 CREATE TABLE task_lists (
   id SERIAL PRIMARY KEY,
@@ -56,6 +55,6 @@ CREATE TABLE events (
   title TEXT NOT NULL,
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ,
-  all_day INTEGER NOT NULL DEFAULT true,
+  all_day BOOLEAN default TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -3,6 +3,7 @@ const deleteForm = document.getElementById("delete-account-form");
 const currentPassword = document.getElementById("current-password");
 const newPassword = document.getElementById("new-password");
 const confirmPassword = document.getElementById("confirm-password");
+const deletePassword = document.getElementById("delete-password");
 const messageBox = document.getElementById("message-box");
 
 passwordForm.addEventListener("submit", (event) => {

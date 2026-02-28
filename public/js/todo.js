@@ -52,7 +52,7 @@ function updateClearReminderVisibility() {
     : "none";
 }
 
-// Funkce pro převod z UTC ISO formátu do lokálního formátu pro input typu date
+// Převod z UTC ISO formátu do lokálního formátu pro input typu date
 function toLocalDateString(dateInput = new Date()) {
   const dateObj = new Date(dateInput);
   if (Number.isNaN(dateObj.getTime())) return "";
@@ -62,7 +62,7 @@ function toLocalDateString(dateInput = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-// Funkce pro převod z utc ISO formátu do lokálního formátu pro input typu datetime-local
+// Převod z UTC ISO formátu do lokálního formátu pro input typu datetime-local
 function utcIsoToLocalDateTime(dateInput) {
   if (!dateInput) return "";
   const dateObj = new Date(dateInput);
@@ -77,7 +77,7 @@ function utcIsoToLocalDateTime(dateInput) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-// Funkce pro převod z lokálního formátu pro input typu datetime-local do UTC ISO formátu
+// Převod z lokálního formátu pro input typu datetime-local do UTC ISO formátu
 function localDateTimeToUtcIso(value) {
   if (!value) return null;
   const dateObj = new Date(value);
@@ -89,7 +89,6 @@ function setupTaskSort() {
   if (!taskSortSelect) {
     return;
   }
-
   taskSortSelect.value = currentSort;
   taskSortSelect.onchange = () => {
     currentSort = taskSortSelect.value || "due_asc";
@@ -105,10 +104,12 @@ async function loadTodolists() {
     const lists = await response.json();
     todolistsContainer.innerHTML = "";
 
+    // Pokud nejsou žádné seznamy, vrátí se prázdný stav bez zobrazení seznamů
     if (!lists || lists.length === 0) {
       return;
     }
 
+    // Zobrazení seznamů úkolů v levém panelu
     lists.forEach((list) => {
       const div = document.createElement("div");
       div.className = "todolist-item";
@@ -207,12 +208,15 @@ function clearTaskEditor() {
   taskTitleInput.value = "";
   taskDueInput.value = "";
   taskReminderInput.value = "";
+  saveTaskButton.disabled = true;
+  deleteSelectedTaskButton.disabled = true;
   updateClearReminderVisibility();
   document
     .querySelectorAll(".task-item")
     .forEach((el) => el.classList.remove("active"));
 }
 
+// Aktualizuje dostupnost přidávání úkolů - povolí přidávání pouze pokud je vybrán seznam a ne quickview/rychlý pohled
 function updateTaskAddVisibility() {
   const canAddTask = currentView === "list" && Boolean(selectedList);
 
@@ -232,8 +236,8 @@ function updateTaskAddVisibility() {
   }
 }
 
+// Načtení úkolů pro aktuální zobrazení (seznam nebo rychlý pohled)
 async function loadTasksForView() {
-  // Načte úkoly podle aktuálního pohledu (konkrétní seznam nebo rychlý pohled)
   try {
     // Sestaví URL pro načtení úkolů podle aktuálního pohledu
     const viewEndpointMap = {
@@ -265,17 +269,20 @@ async function loadTasksForView() {
 
     const isQuickView = currentView !== "list";
 
+    // Zobrazení úkolů v hlavním panelu
     tasks.forEach((task) => {
       const div = document.createElement("div");
       div.className = "task-item";
+
+      // Přidání třídy pro dokončené a důležité úkoly
       if (task.is_completed) {
         div.classList.add("completed");
       }
-
       if (task.is_important) {
         div.classList.add("important");
       }
 
+      // Tlačítko pro označení úkolu jako důležitého
       const importantButton = document.createElement("button");
       importantButton.className = "task-important";
       importantButton.type = "button";
@@ -284,29 +291,20 @@ async function loadTasksForView() {
         event.stopPropagation();
         toggleTaskImportant(task);
       };
+      div.appendChild(importantButton);
 
+      // Checkbox pro označení úkolu jako dokončeného
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = task.is_completed;
       checkbox.onchange = () => toggleTask(task);
-
-      const span = document.createElement("span");
-      span.className = "task-name";
-      span.textContent = task.title;
-      div.onclick = () => selectTask(task, div);
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "task-delete";
-      deleteBtn.type = "button";
-      deleteBtn.textContent = "✕";
-      deleteBtn.onclick = (event) => {
-        event.stopPropagation();
-        deleteTask(task);
-      };
-
-      div.appendChild(importantButton);
       div.appendChild(checkbox);
-      div.appendChild(span);
+
+      // Název úkolu
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "task-name";
+      titleSpan.textContent = task.title;
+      div.appendChild(titleSpan);
 
       // V rychlých pohledech zobrazí název seznamu, do kterého úkol patří
       if (isQuickView && task.tasklist_title) {
@@ -338,8 +336,20 @@ async function loadTasksForView() {
         div.appendChild(due);
       }
 
+      // Tlačítko pro odstranění úkolu
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "task-delete";
+      deleteBtn.type = "button";
+      deleteBtn.textContent = "✕";
+      deleteBtn.onclick = (event) => {
+        event.stopPropagation();
+        deleteTask(task);
+      };
       div.appendChild(deleteBtn);
       taskListContainer.appendChild(div);
+
+      // Kliknutí na úkol spustí funkci pro zobrazení úkolu v editoru
+      div.onclick = () => selectTask(task, div);
     });
   } catch (error) {
     showErrorModal("Error loading tasks");
@@ -354,6 +364,7 @@ async function deleteList(list) {
     });
     if (!response.ok) throw new Error("Failed to delete list");
 
+    // Pokud byl smazaný seznam právě vybraný, zruší jeho výběr a vyčistí zobrazení úkolů
     if (selectedList && selectedList.id === list.id) {
       selectedList = null;
       taskListContainer.innerHTML = "";
@@ -388,6 +399,8 @@ function selectTask(task, element) {
   taskTitleInput.value = task.title;
   taskDueInput.value = task.due ? toLocalDateString(task.due) : "";
   taskReminderInput.value = utcIsoToLocalDateTime(task.remind_at);
+  saveTaskButton.disabled = false;
+  deleteSelectedTaskButton.disabled = false;
   updateClearReminderVisibility();
   document
     .querySelectorAll(".task-item")
@@ -436,12 +449,14 @@ saveTaskButton.onclick = async () => {
     return;
   }
 
+  // Kontrola, že název úkolu není prázdný
   const title = taskTitleInput.value.trim();
   if (!title) {
     showErrorModal("Task title is required");
     return;
   }
 
+  // Převod data připomenutí do UTC ISO formátu pro uložení do databáze
   const utcRemindAt = localDateTimeToUtcIso(taskReminderInput.value);
 
   try {
@@ -450,7 +465,6 @@ saveTaskButton.onclick = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
-        is_completed: Boolean(selectedTask.is_completed),
         due: taskDueInput.value || null,
         remind_at: utcRemindAt,
       }),
@@ -464,9 +478,6 @@ saveTaskButton.onclick = async () => {
 
 // Odstranění úkolu
 async function deleteTask(task) {
-  // Potvrzení smazání úkolu, zatím pouze přes alert
-  //if (!confirm("Delete this task?")) return;
-
   try {
     const response = await fetch(`/api/todo/tasks/${task.id}`, {
       method: "DELETE",
@@ -482,11 +493,13 @@ async function deleteTask(task) {
   }
 }
 
+// Nastavení tlačítka pro odstranění připomenutí úkolu
 clearReminderButton.onclick = () => {
   taskReminderInput.value = "";
   updateClearReminderVisibility();
 };
 
+// Nastavení tlačítka pro odstranění úkolu
 deleteSelectedTaskButton.onclick = async () => {
   if (!selectedTask) {
     showErrorModal("Select a task first");
@@ -496,7 +509,7 @@ deleteSelectedTaskButton.onclick = async () => {
   await deleteTask(selectedTask);
 };
 
-// Přidání nového úkolu
+// Nastavení tlačítka pro přidání úkolu
 addTaskButton.onclick = async () => {
   if (!selectedList) {
     showErrorModal("Select a list first");
@@ -521,7 +534,7 @@ addTaskButton.onclick = async () => {
   }
 };
 
-// Přidání nového seznamu úkolů
+// Nastavení tlačítka pro přidání nového seznamu úkolů
 addTasklistButton.onclick = async () => {
   const title = newTasklistInput.value.trim();
   if (!title) return;
@@ -541,12 +554,13 @@ addTasklistButton.onclick = async () => {
   }
 };
 
+// Inicializace aplikace - nastavení event listenerů a načtení počátečního stavu
 function initTodo() {
   taskReminderInput.addEventListener("input", updateClearReminderVisibility);
   setupQuickViews();
   setupTaskSort();
   loadTodolists();
-  updateClearReminderVisibility();
+  clearTaskEditor();
   updateTaskAddVisibility();
 }
 
