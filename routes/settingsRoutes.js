@@ -41,6 +41,11 @@ router.post("/change-password", ensureAuthenticated, async (req, res) => {
     );
     const user = userRes.rows[0];
 
+    if (!user) {
+      req.flash("error", "User account not found.");
+      return res.redirect("/login");
+    }
+
     // Ověření aktuálního hesla
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
@@ -85,6 +90,12 @@ router.post("/request-delete", ensureAuthenticated, async (req, res) => {
       [req.user.id],
     );
     const user = userRes.rows[0];
+
+    // Ověření, že uživatel existuje
+    if (!user) {
+      req.flash("error", "User account not found.");
+      return res.redirect("/login");
+    }
 
     // Ověření zadaného hesla
     const isMatch = await bcrypt.compare(password, user.password);

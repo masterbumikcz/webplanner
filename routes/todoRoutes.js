@@ -6,7 +6,7 @@ const router = express.Router();
 
 // Pomocná funkce pro získání správného SQL řazení podle parametru sort
 function getTaskOrderBy(sort, fallbackOrderBy) {
-  // Předpona řazení: dokončené úkoly na konec a důležité nahoru
+  // Předpona řazení  (důležité úkoly na začátku, dokončené úkoly na konci)
   const priorityPrefix = "t.is_completed ASC, t.is_important DESC, ";
 
   // Mapování hodnot parametru sort na odpovídající SQL řazení
@@ -33,6 +33,7 @@ router.get("/lists", ensureApiAuthenticated, async (req, res) => {
     const lists = listsRes.rows;
     res.json(lists);
   } catch (err) {
+    console.error("Error fetching todo lists:", err);
     res.status(500).json({ error: "Failed to fetch lists" });
   }
 });
@@ -51,6 +52,7 @@ router.post("/lists", ensureApiAuthenticated, async (req, res) => {
     );
     res.status(201).json({ success: true });
   } catch (err) {
+    console.error("Error creating todo list:", err);
     res.status(500).json({ error: "Failed to create list" });
   }
 });
@@ -67,23 +69,24 @@ router.delete("/lists/:id", ensureApiAuthenticated, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Error deleting todo list:", err);
     res.status(500).json({ error: "Failed to delete list" });
   }
 });
 
-// Získání všech úkolů pro daný seznam
+// Získání úkolů pro daný seznam
 router.get(
   "/lists/:taskListId/tasks",
   ensureApiAuthenticated,
   async (req, res) => {
     try {
+      // Získání správného řazení úkolů podle query parametru sort
       const orderBy = getTaskOrderBy(
         req.query.sort,
-        // Používám query a ne parametry, protože se jedná o volitelný parametr pro řazení, který může být přítomen nebo ne
-        // Zatímco pro ID seznamu používám parametry, protože je povinný a musí být součástí URL
         "t.is_completed ASC, t.is_important DESC, t.due IS NULL, t.due ASC, lower(t.title) ASC",
       );
 
+      // Získání seznamu pro dané taskListId a ověření, že patří přihlášenému uživateli
       const listRes = await pool.query(
         "SELECT id FROM task_lists WHERE id = $1 AND user_id = $2",
         [req.params.taskListId, req.user.id],
@@ -93,6 +96,7 @@ router.get(
         return res.status(404).json({ error: "List not found" });
       }
 
+      // Získání úkolů pro daný seznam s použitím správného řazení
       const tasksRes = await pool.query(
         `SELECT t.id, t.title, t.is_completed, t.is_important, t.due, t.remind_at
          FROM tasks t
@@ -102,6 +106,7 @@ router.get(
       );
       res.json(tasksRes.rows);
     } catch (err) {
+      console.error("Error fetching tasks for list:", err);
       res.status(500).json({ error: "Failed to fetch tasks" });
     }
   },
@@ -116,7 +121,9 @@ router.post(
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Task title is required" });
     }
+
     try {
+      // Získání seznamu pro dané taskListId a ověření, že patří přihlášenému uživateli
       const listRes = await pool.query(
         "SELECT id FROM task_lists WHERE id = $1 AND user_id = $2",
         [req.params.taskListId, req.user.id],
@@ -126,18 +133,20 @@ router.post(
         return res.status(404).json({ error: "List not found" });
       }
 
+      // Vložení nového úkolu do databáze
       await pool.query(
         "INSERT INTO tasks (user_id, tasklist_id, title) VALUES ($1, $2, $3)",
         [req.user.id, req.params.taskListId, title.trim()],
       );
       res.status(201).json({ success: true });
     } catch (err) {
+      console.error("Error adding task to list:", err);
       res.status(500).json({ error: "Failed to add task" });
     }
   },
 );
 
-// Získání všech úkolů pro přihlášeného uživatele (napříč seznamy)
+// Získání všech úkolů pro přihlášeného uživatele (ze všech seznamů)
 router.get("/alltasks", ensureApiAuthenticated, async (req, res) => {
   try {
     const orderBy = getTaskOrderBy(
@@ -156,6 +165,7 @@ router.get("/alltasks", ensureApiAuthenticated, async (req, res) => {
     );
     res.json(tasksRes.rows);
   } catch (err) {
+    console.error("Error fetching all tasks:", err);
     res.status(500).json({ error: "Failed to fetch tasks" });
   }
 });
@@ -179,6 +189,7 @@ router.get("/currentday", ensureApiAuthenticated, async (req, res) => {
     );
     res.json(tasksRes.rows);
   } catch (err) {
+    console.error("Error fetching current day tasks:", err);
     res.status(500).json({ error: "Failed to fetch current day tasks" });
   }
 });
@@ -205,6 +216,7 @@ router.get("/overdue", ensureApiAuthenticated, async (req, res) => {
     );
     res.json(tasksRes.rows);
   } catch (err) {
+    console.error("Error fetching overdue tasks:", err);
     res.status(500).json({ error: "Failed to fetch overdue tasks" });
   }
 });
@@ -228,6 +240,7 @@ router.get("/completed", ensureApiAuthenticated, async (req, res) => {
     );
     res.json(tasksRes.rows);
   } catch (err) {
+    console.error("Error fetching completed tasks:", err);
     res.status(500).json({ error: "Failed to fetch completed tasks" });
   }
 });
@@ -251,6 +264,7 @@ router.get("/important", ensureApiAuthenticated, async (req, res) => {
     );
     res.json(tasksRes.rows);
   } catch (err) {
+    console.error("Error fetching important tasks:", err);
     res.status(500).json({ error: "Failed to fetch important tasks" });
   }
 });
@@ -262,11 +276,8 @@ router.patch(
   async (req, res) => {
     const { is_completed } = req.body;
 
-    if (typeof is_completed !== "boolean") {
-      return res.status(400).json({ error: "is_completed must be a boolean" });
-    }
-
     try {
+      // Aktualizace stavu dokončení úkolu v databázi
       const result = await pool.query(
         "UPDATE tasks SET is_completed = $1 WHERE id = $2 AND user_id = $3",
         [is_completed, req.params.id, req.user.id],
@@ -278,6 +289,7 @@ router.patch(
 
       res.json({ success: true });
     } catch (err) {
+      console.error("Error updating task completion:", err);
       res.status(500).json({ error: "Failed to update task completion" });
     }
   },
@@ -290,11 +302,8 @@ router.patch(
   async (req, res) => {
     const { is_important } = req.body;
 
-    if (typeof is_important !== "boolean") {
-      return res.status(400).json({ error: "is_important must be a boolean" });
-    }
-
     try {
+      // Aktualizace stavu důležitosti úkolu v databázi
       const result = await pool.query(
         "UPDATE tasks SET is_important = $1 WHERE id = $2 AND user_id = $3",
         [is_important, req.params.id, req.user.id],
@@ -306,6 +315,7 @@ router.patch(
 
       res.json({ success: true });
     } catch (err) {
+      console.error("Error updating task importance:", err);
       res.status(500).json({ error: "Failed to update task importance" });
     }
   },
@@ -313,7 +323,7 @@ router.patch(
 
 // Uložení změn úkolu
 router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
-  const { title, is_completed, due, remind_at } = req.body;
+  const { title, due, remind_at } = req.body;
   if (!title || !title.trim()) {
     return res.status(400).json({ error: "Task title is required" });
   }
@@ -321,10 +331,9 @@ router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
     const normalizedReminder = remind_at && remind_at.trim() ? remind_at : null;
 
     const result = await pool.query(
-      "UPDATE tasks SET title = $1, is_completed = $2, due = $3, remind_at = $4 WHERE id = $5 AND user_id = $6",
+      "UPDATE tasks SET title = $1, due = $2, remind_at = $3 WHERE id = $4 AND user_id = $5",
       [
         title.trim(),
-        is_completed,
         due || null,
         normalizedReminder,
         req.params.id,
@@ -336,6 +345,7 @@ router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Error updating task:", err);
     res.status(500).json({ error: "Failed to update task" });
   }
 });
@@ -343,6 +353,7 @@ router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
 // Odstranění úkolu
 router.delete("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
   try {
+    // Odstranění úkolu z databáze
     const result = await pool.query(
       "DELETE FROM tasks WHERE id = $1 AND user_id = $2",
       [req.params.id, req.user.id],
@@ -352,6 +363,7 @@ router.delete("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Error deleting task:", err);
     res.status(500).json({ error: "Failed to delete task" });
   }
 });

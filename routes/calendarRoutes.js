@@ -14,6 +14,7 @@ router.get("/", ensureApiAuthenticated, async (req, res) => {
     const events = eventsRes.rows;
     res.json(events);
   } catch (err) {
+    console.error("Error fetching events:", err);
     res.status(500).json({ error: "Failed to fetch events" });
   }
 });
@@ -25,19 +26,22 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
     return res.status(400).json({ error: "Title and start are required" });
   }
 
+  // Kontrola, zda
+  if (end && new Date(start) > new Date(end)) {
+    return res
+      .status(400)
+      .json({ error: "End time cannot be before start time." });
+  }
+
   try {
-    const result = await pool.query(
-      "INSERT INTO events (user_id, title, start_at, end_at, all_day) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+    // Vložení nové události do databáze
+    await pool.query(
+      "INSERT INTO events (user_id, title, start_at, end_at, all_day) VALUES ($1, $2, $3, $4, $5)",
       [req.user.id, title.trim(), start, end || null, Boolean(all_day)],
     );
-    res.json({
-      id: result.rows[0]?.id,
-      title: title.trim(),
-      start,
-      end: end || null,
-      all_day: Boolean(all_day),
-    });
+    res.status(201).json({ success: true });
   } catch (err) {
+    console.error("Error creating event:", err);
     res.status(500).json({ error: "Failed to create event" });
   }
 });
@@ -47,6 +51,13 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
   const { title, start, end, all_day } = req.body;
   if (!title || !title.trim() || !start) {
     return res.status(400).json({ error: "Title and start are required" });
+  }
+
+  // Kontrola, zda není nastaven konec před začátkem
+  if (end && new Date(start) > new Date(end)) {
+    return res
+      .status(400)
+      .json({ error: "End time cannot be before start time." });
   }
 
   try {
@@ -66,6 +77,7 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Error updating event:", err);
     res.status(500).json({ error: "Failed to update event" });
   }
 });
@@ -82,6 +94,7 @@ router.delete("/:id", ensureApiAuthenticated, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error("Error deleting event:", err);
     res.status(500).json({ error: "Failed to delete event" });
   }
 });
