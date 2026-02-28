@@ -258,11 +258,42 @@ body {
 	flex: 1;
 }
 
+.task-important {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0 2px;
+}
+
+.task-item.important .task-important {
+	color: var(--secondary);
+}
+
+.task-important:hover {
+	color: var(--secondary);
+}
+
 
 .task-due {
 	font-size: 12px;
 	color: var(--muted);
 	margin-left: 6px;
+}
+
+.task-reminder {
+	font-size: 12px;
+	color: var(--muted);
+	margin-left: 6px;
+}
+
+.task-list-title {
+	font-size: 12px;
+	color: var(--muted);
+	margin-left: 6px;
+	font-style: italic;
 }
 
 .task-due.overdue {

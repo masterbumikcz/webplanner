@@ -28,7 +28,7 @@
 			<h2>Change Password</h2>
 			<p class="helper-text">Choose a strong password you do not use elsewhere.</p>
 			<div id="message-box" class="messages"></div>
-			<form action="/settings/change-password" method="POST">
+			<form action="/settings/change-password" id="change-password-form" method="POST">
 				<label for="current-password">Current password</label>
 				<input type="password" id="current-password" name="currentPassword" autocomplete="current-password">
 
@@ -47,9 +47,9 @@
 			<p class="helper-text">
 				We will send a confirmation email with a token. Your account will be deleted only after you confirm it.
 			</p>
-			<form action="/settings/request-delete" method="POST">
-				<label for="delete-email">Confirm your email</label>
-				<input type="email" id="delete-email" name="email" placeholder="you@example.com">
+			<form action="/settings/request-delete" id="delete-account-form" method="POST">
+				<label for="delete-password">Confirm your password</label>
+				<input type="password" id="delete-password" name="password" placeholder="Your password" autocomplete="current-password">
 
 				<button type="submit" class="danger-button">Send deletion email</button>
 			</form>
@@ -60,6 +60,7 @@
 	</main>
 
 	<script src="/js/messages.js"></script>
+	<script src="/js/settings.js"></script>
 </body>
 
 </html>

@@ -1,5 +1,5 @@
 import express from "express";
-import db from "../db.js";
+import pool from "../db.js";
 import { ensureApiAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 // Získání všech událostí
 router.get("/", ensureApiAuthenticated, async (req, res) => {
   try {
-    const eventsRes = await db.query(
+    const eventsRes = await pool.query(
       "SELECT id, title, start_at AS start, end_at AS end, all_day FROM events WHERE user_id = $1 ORDER BY start_at ASC",
       [req.user.id],
     );
@@ -26,7 +26,7 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const result = await pool.query(
       "INSERT INTO events (user_id, title, start_at, end_at, all_day) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [req.user.id, title.trim(), start, end || null, Boolean(all_day)],
     );
@@ -50,13 +50,13 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const result = await pool.query(
       "UPDATE events SET title = $1, start_at = $2, end_at = $3, all_day = $4 WHERE id = $5 AND user_id = $6",
       [
         title.trim(),
         start,
         end || null,
-        all_day ? 1 : 0,
+        Boolean(all_day),
         req.params.id,
         req.user.id,
       ],
@@ -73,7 +73,7 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
 // Odstranění události
 router.delete("/:id", ensureApiAuthenticated, async (req, res) => {
   try {
-    const result = await db.query(
+    const result = await pool.query(
       "DELETE FROM events WHERE id = $1 AND user_id = $2",
       [req.params.id, req.user.id],
     );

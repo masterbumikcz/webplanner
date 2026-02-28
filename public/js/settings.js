@@ -1,28 +1,28 @@
-// Skript pro kontrolu hesla na frontendu a zobrazení chybových zpráv
-const form = document.getElementById("register-form");
-const email = document.getElementById("email");
-const password = document.getElementById("password");
-const confirmPassword = document.getElementById("confirmPassword");
+const passwordForm = document.getElementById("change-password-form");
+const deleteForm = document.getElementById("delete-account-form");
+const currentPassword = document.getElementById("current-password");
+const newPassword = document.getElementById("new-password");
+const confirmPassword = document.getElementById("confirm-password");
 const messageBox = document.getElementById("message-box");
 
-form.addEventListener("submit", (event) => {
+passwordForm.addEventListener("submit", (event) => {
   // Kontrola, zda jsou všechna pole vyplněna
-  if (!email.value.trim()) {
+  if (!currentPassword.value.trim()) {
     event.preventDefault();
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";
-    el.textContent = "E-mail is required.";
+    el.textContent = "Current password is required.";
     messageBox.appendChild(el);
     return;
   }
 
-  if (!password.value.trim()) {
+  if (!newPassword.value.trim()) {
     event.preventDefault();
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";
-    el.textContent = "Password is required.";
+    el.textContent = "New password is required.";
     messageBox.appendChild(el);
     return;
   }
@@ -32,40 +32,42 @@ form.addEventListener("submit", (event) => {
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";
-    el.textContent = "Please confirm your password.";
+    el.textContent = "Please confirm your new password.";
     messageBox.appendChild(el);
     return;
   }
 
-  // Kontrola formátu e-mailu
-  if (!email.checkValidity()) {
+  // Kontrola délky nového hesla
+  if (newPassword.value.length < 8) {
     event.preventDefault();
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";
-    el.textContent = "Please enter a valid e-mail address.";
-    messageBox.appendChild(el);
-    return;
-  }
-
-  // Kontrola délky hesla
-  if (password.value.length < 8) {
-    event.preventDefault();
-    messageBox.textContent = "";
-    const el = document.createElement("div");
-    el.className = "message message--error";
-    el.textContent = "Password must be at least 8 characters long.";
+    el.textContent = "New password must be at least 8 characters long.";
     messageBox.appendChild(el);
     return;
   }
 
   // Kontrola shody hesel
-  if (password.value !== confirmPassword.value) {
+  if (newPassword.value !== confirmPassword.value) {
     event.preventDefault();
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";
-    el.textContent = "Passwords do not match.";
+    el.textContent = "New passwords do not match.";
     messageBox.appendChild(el);
+    return;
+  }
+});
+
+deleteForm.addEventListener("submit", (event) => {
+  if (!deletePassword.value.trim()) {
+    event.preventDefault();
+    messageBox.textContent = "";
+    const el = document.createElement("div");
+    el.className = "message message--error";
+    el.textContent = "Password is required.";
+    messageBox.appendChild(el);
+    return;
   }
 });

@@ -3,12 +3,12 @@ import dotenv from "dotenv";
 import express from "express";
 import flash from "express-flash";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
 import passport from "passport";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import cron from "node-cron";
 import nodemailer from "nodemailer";
-
 import configurePassport from "./config/passport.js";
 import pool from "./db.js";
 import {
@@ -19,6 +19,7 @@ import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import todoRoutes from "./routes/todoRoutes.js";
 import passwordRoutes from "./routes/passwordRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 
 // Config
 dotenv.config();
@@ -27,17 +28,33 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const port = 8080;
+// Proměnná pro zjištění, zda je aplikace spuštěna v produkčním prostředí (např. Render), nebo lokálně (vývoj)
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+const PostgresSessionStore = pgSession(session);
 app.use(
   session({
+    store: new PostgresSessionStore({
+      pool: pool,
+      tableName: "session",
+    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }, // 1 den
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      maxAge: 1000 * 60 * 60 * 24,
+    }, // 1 den
   }),
 );
 
@@ -52,6 +69,7 @@ app.use("/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/todo", todoRoutes);
 app.use("/password", passwordRoutes);
+app.use("/settings", settingsRoutes);
 
 app.get("/", (req, res) => {
   if (req.isAuthenticated()) {
@@ -113,7 +131,7 @@ cron.schedule("* * * * *", async () => {
   console.log("Running reminder check...");
 
   try {
-    // Získání úkolů, které mají nastavené připomenutí, které je v minulosti nebo právě teď, a které ještě nebyly oznámeny
+    // Získání úkolů, které mají nastavené připomenutí, které je v minulosti nebo právě teď a které nejsou dokončené
     const tasksToNotifyRes = await pool.query(
       `
       SELECT id, user_id, title, due, remind_at
@@ -121,7 +139,6 @@ cron.schedule("* * * * *", async () => {
       WHERE remind_at IS NOT NULL
         AND remind_at <= NOW()
         AND is_completed = false
-        AND notified = false
       `,
     );
     const tasksToNotify = tasksToNotifyRes.rows;
@@ -132,22 +149,26 @@ cron.schedule("* * * * *", async () => {
         `Notifying user ${task.user_id} about task "${task.title}" with reminder at ${task.remind_at}`,
       );
 
+      // Získání uživatele s emailem, kterému patří úkol
       const userRes = await pool.query(
         "SELECT email FROM users WHERE id = $1",
         [task.user_id],
       );
       const user = userRes.rows[0];
       if (user) {
+        // Vytvoření emailu s připomenutím
         const mailOptions = {
           from: process.env.GMAIL_USER,
           to: user.email,
           subject: "Webplanner task reminder: " + task.title,
           text: `This is a reminder for your task "${task.title}".${task.due ? ` Due date: ${formatDueDate(task.due)}.` : ""}`,
         };
+        // Odeslání emailu uživatelovi
         try {
           const info = await transporter.sendMail(mailOptions);
           console.log(`Reminder email sent to ${user.email}: ${info.response}`);
-          await pool.query("UPDATE tasks SET notified = true WHERE id = $1", [
+          // Odstranění remind_at z úkolu, aby se připomenutí neodesílalo znovu
+          await pool.query("UPDATE tasks SET remind_at = NULL WHERE id = $1", [
             task.id,
           ]);
         } catch (error) {
@@ -156,6 +177,10 @@ cron.schedule("* * * * *", async () => {
             error,
           );
         }
+      } else {
+        console.error(
+          `User with ID ${task.user_id} not found for task "${task.title}"`,
+        );
       }
     }
   } catch (err) {
@@ -166,4 +191,5 @@ cron.schedule("* * * * *", async () => {
 // Start server
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
+  console.log(`Running in ${isProduction ? "production" : "development"} mode`);
 });

@@ -1,6 +1,6 @@
 import express from "express";
 import bcrypt from "bcrypt";
-import db from "../db.js";
+import pool from "../db.js";
 import passport from "passport";
 
 const router = express.Router();
@@ -30,7 +30,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Kontrola jestli uživatel s daným emailem již neexistuje
-    const existingUserRes = await db.query(
+    const existingUserRes = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email],
     );
@@ -57,10 +57,10 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Vložení nového uživatele se zaheshovaným heslem do databáze
-    await db.query(
-      "INSERT INTO users (email, password) VALUES ($1, $2)",
-      [email, hashedPassword],
-    );
+    await pool.query("INSERT INTO users (email, password) VALUES ($1, $2)", [
+      email,
+      hashedPassword,
+    ]);
 
     req.flash("success", "Registration successful! Please login.");
     return res.redirect("/login");

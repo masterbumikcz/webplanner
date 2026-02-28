@@ -11,6 +11,9 @@ const quickViewCurrentDayButton = document.getElementById(
   "quick-view-current-day",
 );
 const quickViewOverdueButton = document.getElementById("quick-view-overdue");
+const quickViewImportantButton = document.getElementById(
+  "quick-view-important",
+);
 const quickViewCompletedButton = document.getElementById(
   "quick-view-completed",
 );
@@ -81,7 +84,7 @@ function localDateTimeToUtcIso(value) {
   return Number.isNaN(dateObj.getTime()) ? null : dateObj.toISOString();
 }
 
-// Funkce pro získání správného řazení úkolů pro API na základě zvoleného řazení v UI
+// Nastavení řazení úkolů pro API podle volby v uživatelském rozhraní
 function setupTaskSort() {
   if (!taskSortSelect) {
     return;
@@ -146,6 +149,10 @@ function setupQuickViews() {
     setQuickView("overdue");
   };
 
+  quickViewImportantButton.onclick = () => {
+    setQuickView("important");
+  };
+
   quickViewCompletedButton.onclick = () => {
     setQuickView("completed");
   };
@@ -159,11 +166,14 @@ function setQuickView(view) {
   clearListSelection();
   clearTaskEditor();
   updateQuickViewActive(view);
+  updateTaskAddVisibility();
 
+  // Zajistí načtení úkolů pouze pro validní rychlé pohledy
   const shouldLoadTasks =
     view === "all" ||
     view === "currentDay" ||
     view === "overdue" ||
+    view === "important" ||
     view === "completed";
 
   if (shouldLoadTasks) {
@@ -174,23 +184,24 @@ function setQuickView(view) {
   taskListContainer.innerHTML = "";
 }
 
+// Zvýraznění aktivního rychlého pohledu v UI
 function updateQuickViewActive(view) {
-  // Zvýrazní aktivní rychlý pohled
   quickViewAllButton.classList.toggle("active", view === "all");
   quickViewCurrentDayButton.classList.toggle("active", view === "currentDay");
   quickViewOverdueButton.classList.toggle("active", view === "overdue");
+  quickViewImportantButton.classList.toggle("active", view === "important");
   quickViewCompletedButton.classList.toggle("active", view === "completed");
 }
 
+// Zrušení zvýraznění aktivního seznamu úkolů a zobrazení, že žádný seznam není vybrán
 function clearListSelection() {
-  // Zruší aktivní označení seznamu
   document
     .querySelectorAll(".todolist-item")
     .forEach((el) => el.classList.remove("active"));
 }
 
+// Vyčistí editor úkolu a zruší zvýraznění aktivního úkolu
 function clearTaskEditor() {
-  // Vyčistí editor úkolu
   selectedTaskId = null;
   selectedTask = null;
   taskTitleInput.value = "";
@@ -202,8 +213,27 @@ function clearTaskEditor() {
     .forEach((el) => el.classList.remove("active"));
 }
 
+function updateTaskAddVisibility() {
+  const canAddTask = currentView === "list" && Boolean(selectedList);
+
+  if (newTaskInput) {
+    newTaskInput.disabled = !canAddTask;
+    newTaskInput.placeholder = canAddTask
+      ? "New task"
+      : "Select a list to add a task";
+
+    if (!canAddTask) {
+      newTaskInput.value = "";
+    }
+  }
+
+  if (addTaskButton) {
+    addTaskButton.disabled = !canAddTask;
+  }
+}
+
 async function loadTasksForView() {
-  // Načte úkoly podle aktuálního pohledu (list/all)
+  // Načte úkoly podle aktuálního pohledu (konkrétní seznam nebo rychlý pohled)
   try {
     // Sestaví URL pro načtení úkolů podle aktuálního pohledu
     const viewEndpointMap = {
@@ -211,6 +241,7 @@ async function loadTasksForView() {
       all: "/api/todo/alltasks",
       currentDay: "/api/todo/currentday",
       overdue: "/api/todo/overdue",
+      important: "/api/todo/important",
       completed: "/api/todo/completed",
     };
 
@@ -232,12 +263,27 @@ async function loadTasksForView() {
     taskListContainer.innerHTML = "";
     const todayLocal = toLocalDateString();
 
+    const isQuickView = currentView !== "list";
+
     tasks.forEach((task) => {
       const div = document.createElement("div");
       div.className = "task-item";
       if (task.is_completed) {
         div.classList.add("completed");
       }
+
+      if (task.is_important) {
+        div.classList.add("important");
+      }
+
+      const importantButton = document.createElement("button");
+      importantButton.className = "task-important";
+      importantButton.type = "button";
+      importantButton.textContent = task.is_important ? "★" : "☆";
+      importantButton.onclick = (event) => {
+        event.stopPropagation();
+        toggleTaskImportant(task);
+      };
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -249,17 +295,6 @@ async function loadTasksForView() {
       span.textContent = task.title;
       div.onclick = () => selectTask(task, div);
 
-      const due = document.createElement("span");
-      due.className = "task-due";
-      if (
-        task.due &&
-        toLocalDateString(task.due) < todayLocal &&
-        !task.is_completed
-      ) {
-        due.classList.add("overdue");
-      }
-      due.textContent = task.due ? `Due: ${toLocalDateString(task.due)}` : "";
-
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "task-delete";
       deleteBtn.type = "button";
@@ -269,11 +304,40 @@ async function loadTasksForView() {
         deleteTask(task);
       };
 
+      div.appendChild(importantButton);
       div.appendChild(checkbox);
       div.appendChild(span);
+
+      // V rychlých pohledech zobrazí název seznamu, do kterého úkol patří
+      if (isQuickView && task.tasklist_title) {
+        const listTitleSpan = document.createElement("span");
+        listTitleSpan.className = "task-list-title";
+        listTitleSpan.textContent = `List: ${task.tasklist_title}`;
+        div.appendChild(listTitleSpan);
+      }
+
+      // Zobrazení připomenutí úkolu, pokud je nastaveno
+      if (task.remind_at) {
+        const reminder = document.createElement("span");
+        reminder.className = "task-reminder";
+        const localReminder = utcIsoToLocalDateTime(task.remind_at);
+        reminder.textContent = localReminder
+          ? `Reminder: ${localReminder.replace("T", " ")}`
+          : "";
+        div.appendChild(reminder);
+      }
+
+      // Zobrazení data splnění úkolu, pokud je nastaveno
       if (task.due) {
+        const due = document.createElement("span");
+        due.className = "task-due";
+        if (toLocalDateString(task.due) < todayLocal && !task.is_completed) {
+          due.classList.add("overdue");
+        }
+        due.textContent = `Due: ${toLocalDateString(task.due)}`;
         div.appendChild(due);
       }
+
       div.appendChild(deleteBtn);
       taskListContainer.appendChild(div);
     });
@@ -294,6 +358,7 @@ async function deleteList(list) {
       selectedList = null;
       taskListContainer.innerHTML = "";
       clearTaskEditor();
+      updateTaskAddVisibility();
     }
 
     loadTodolists();
@@ -307,6 +372,7 @@ function selectList(list, element) {
   selectedList = list;
   currentView = "list";
   updateQuickViewActive(null);
+  updateTaskAddVisibility();
   clearTaskEditor();
   document
     .querySelectorAll(".todolist-item")
@@ -343,6 +409,23 @@ async function toggleTask(task) {
     loadTasksForView();
   } catch (error) {
     showErrorModal("Error updating task");
+  }
+}
+
+// Přepnutí stavu důležitosti úkolu (is_important)
+async function toggleTaskImportant(task) {
+  try {
+    const response = await fetch(`/api/todo/tasks/${task.id}/important`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_important: !task.is_important,
+      }),
+    });
+    if (!response.ok) throw new Error("Failed to update task importance");
+    loadTasksForView();
+  } catch (error) {
+    showErrorModal("Error updating task importance");
   }
 }
 
@@ -464,6 +547,7 @@ function initTodo() {
   setupTaskSort();
   loadTodolists();
   updateClearReminderVisibility();
+  updateTaskAddVisibility();
 }
 
 initTodo();

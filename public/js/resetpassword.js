@@ -10,8 +10,40 @@ if (tokenInput && token) {
   tokenInput.value = token;
 }
 
-// Kontrola hesla (minimální délka a shoda) před odesláním formuláře
 form.addEventListener("submit", (event) => {
+  // Kontrola, zda jsou všechna pole vyplněna
+  if (!tokenInput || !tokenInput.value.trim()) {
+    event.preventDefault();
+    messageBox.textContent = "";
+    const el = document.createElement("div");
+    el.className = "message message--error";
+    el.textContent =
+      "Reset token is missing. Please open the reset link again.";
+    messageBox.appendChild(el);
+    return;
+  }
+
+  if (!password.value.trim()) {
+    event.preventDefault();
+    messageBox.textContent = "";
+    const el = document.createElement("div");
+    el.className = "message message--error";
+    el.textContent = "Password is required.";
+    messageBox.appendChild(el);
+    return;
+  }
+
+  if (!confirmPassword.value.trim()) {
+    event.preventDefault();
+    messageBox.textContent = "";
+    const el = document.createElement("div");
+    el.className = "message message--error";
+    el.textContent = "Please confirm your password.";
+    messageBox.appendChild(el);
+    return;
+  }
+
+  // Kontrola délky hesla
   if (password.value.length < 8) {
     event.preventDefault();
     messageBox.textContent = "";
@@ -22,6 +54,7 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
+  // Kontrola shody hesel
   if (password.value !== confirmPassword.value) {
     event.preventDefault();
     messageBox.textContent = "";

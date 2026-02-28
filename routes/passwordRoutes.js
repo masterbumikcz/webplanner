@@ -56,27 +56,26 @@ router.post("/forgot-password", async (req, res) => {
         from: process.env.GMAIL_USER,
         to: user.email,
         subject: "Password reset for your Webplanner account",
-        text: `Click the following link to reset your password: http://localhost:8080/password/reset-password/${token} \n\nThis link will expire in 15 minutes.`,
+        text: `Click the following link to reset your password: ${process.env.BASE_URL}/password/reset-password/${token} \n\nThis link will expire in 15 minutes.`,
       };
 
       // Odeslání emailu
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error sending email:", error);
-          req.flash(
-            "error",
-            "Failed to send password reset email. Please try again later.",
-          );
-          return res.redirect("/forgot-password");
-        } else {
-          console.log("Email sent: " + info.response);
-          req.flash(
-            "success",
-            "Password reset email sent successfully. Please check your inbox.",
-          );
-          return res.redirect("/forgot-password");
-        }
-      });
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent: " + info.response);
+        req.flash(
+          "success",
+          "Password reset email sent successfully. Please check your inbox.",
+        );
+        return res.redirect("/forgot-password");
+      } catch (error) {
+        console.error("Error sending email:", error);
+        req.flash(
+          "error",
+          "Failed to send password reset email. Please try again later.",
+        );
+        return res.redirect("/forgot-password");
+      }
     } else {
       // Zobrazení chybové zprávy pokud e-mail nebyl nalezen
       req.flash("error", "Email not found. Please check your email address.");

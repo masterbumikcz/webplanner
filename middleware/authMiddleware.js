@@ -1,4 +1,5 @@
 // Middlewary pro ověřování a redirekce pro authentikované nebo neauthentikované uživatele
+// (př.: nepřihlášený uživatel se omylem dostane na /todo (třeba přes historii v adresním řádku), ale je přesměrován na /login)
 
 // Kontrola, zda je uživatel přihlášen, pokud není, je přesměrován na přihlašovací stránku
 export function ensureAuthenticated(req, res, next) {
