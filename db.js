@@ -1,10 +1,11 @@
 import pg from "pg";
-import dotenv from "dotenv";
 
-dotenv.config();
+const { Pool, types } = pg;
 
-const { Pool } = pg;
+// Načítá typ date z PostgreSQL jako string a ne jako JavaScript Date, aby nedocházelo k problémům s časovými zónami
+types.setTypeParser(1082, (value) => value);
 
+// Vytvoření poolu pro připojení k PostgreSQL databázi
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {

@@ -4,6 +4,11 @@ import { ensureApiAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Validace, zda je parametr platné celé číslo (ID)
+function isValidId(value) {
+  return /^\d+$/.test(value);
+}
+
 // Získání všech událostí
 router.get("/", ensureApiAuthenticated, async (req, res) => {
   try {
@@ -26,7 +31,7 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
     return res.status(400).json({ error: "Title and start are required" });
   }
 
-  // Kontrola, zda
+  // Kontrola, zda není nastaven konec před začátkem
   if (end && new Date(start) > new Date(end)) {
     return res
       .status(400)
@@ -48,6 +53,10 @@ router.post("/", ensureApiAuthenticated, async (req, res) => {
 
 // Aktualizace existující události
 router.put("/:id", ensureApiAuthenticated, async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid event ID" });
+  }
+
   const { title, start, end, all_day } = req.body;
   if (!title || !title.trim() || !start) {
     return res.status(400).json({ error: "Title and start are required" });
@@ -84,6 +93,10 @@ router.put("/:id", ensureApiAuthenticated, async (req, res) => {
 
 // Odstranění události
 router.delete("/:id", ensureApiAuthenticated, async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid event ID" });
+  }
+
   try {
     const result = await pool.query(
       "DELETE FROM events WHERE id = $1 AND user_id = $2",

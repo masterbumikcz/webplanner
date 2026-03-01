@@ -1,5 +1,5 @@
 // Imports
-import dotenv from "dotenv";
+import "dotenv/config";
 import express from "express";
 import flash from "express-flash";
 import session from "express-session";
@@ -8,8 +8,8 @@ import passport from "passport";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import cron from "node-cron";
-import nodemailer from "nodemailer";
 import configurePassport from "./config/passport.js";
+import transporter from "./config/transporter.js";
 import pool from "./db.js";
 import {
   ensureAuthenticated,
@@ -22,7 +22,6 @@ import passwordRoutes from "./routes/passwordRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 
 // Config
-dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -39,13 +38,24 @@ if (isProduction) {
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+// Nastavení session s PostgreSQL jako úložištěm
 const PostgresSessionStore = pgSession(session);
+const sessionStore = new PostgresSessionStore({
+  pool: pool,
+  tableName: "session",
+  errorLog: (error) => {
+    console.error("Session store query error:", error);
+  },
+});
+
+sessionStore.on("error", (error) => {
+  console.error("Session store error:", error);
+});
+
+// Konfigurace session
 app.use(
   session({
-    store: new PostgresSessionStore({
-      pool: pool,
-      tableName: "session",
-    }),
+    store: sessionStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -107,17 +117,22 @@ app.get("/calendar", ensureAuthenticated, (req, res) => {
   res.sendFile(join(__dirname, "public", "calendar.html"));
 });
 
+app.use((err, req, res, next) => {
+  console.error("Unhandled request error:", err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  if (req.path.startsWith("/password/reset-password")) {
+    return res.redirect("/forgot-password");
+  }
+
+  return res.status(500).send("Internal Server Error");
+});
+
 // Static files
 app.use(express.static("public"));
-
-// Vytvoření trasportéru pro odeslání emailu
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
 
 function formatDueDate(due) {
   if (!due) return "";
@@ -126,10 +141,9 @@ function formatDueDate(due) {
   return formattedDate;
 }
 
-// Cron job pro kontrolu úkolů, které mají nastavené připomenutí, a odeslání e-mailu ve chvíli remind_at
+// Cron job pro kontrolu úkolů, které mají nastavené připomenutí a odeslání emailu s připomenutím
+// Cron job se spouští každou minutu
 cron.schedule("* * * * *", async () => {
-  console.log("Running reminder check...");
-
   try {
     // Získání úkolů, které mají nastavené připomenutí, které je v minulosti nebo právě teď a které nejsou dokončené
     const tasksToNotifyRes = await pool.query(
@@ -145,10 +159,6 @@ cron.schedule("* * * * *", async () => {
 
     // Pro každý úkol, který potřebuje oznámit, získáme email uživatele a odešleme připomenutí
     for (const task of tasksToNotify) {
-      console.log(
-        `Notifying user ${task.user_id} about task "${task.title}" with reminder at ${task.remind_at}`,
-      );
-
       // Získání uživatele s emailem, kterému patří úkol
       const userRes = await pool.query(
         "SELECT email FROM users WHERE id = $1",
@@ -166,7 +176,6 @@ cron.schedule("* * * * *", async () => {
         // Odeslání emailu uživatelovi
         try {
           const info = await transporter.sendMail(mailOptions);
-          console.log(`Reminder email sent to ${user.email}: ${info.response}`);
           // Odstranění remind_at z úkolu, aby se připomenutí neodesílalo znovu
           await pool.query("UPDATE tasks SET remind_at = NULL WHERE id = $1", [
             task.id,
@@ -185,6 +194,17 @@ cron.schedule("* * * * *", async () => {
     }
   } catch (err) {
     console.error("Error during reminder check:", err);
+  }
+});
+
+// Cron job pro mazání expirovaných tokenů resetu hesla a smazání účtu
+// Cron job se spouští každý den o půlnoci
+cron.schedule("* * * * *", async () => {
+  try {
+    await pool.query("DELETE FROM password_resets WHERE expires_at < NOW()");
+    await pool.query("DELETE FROM account_deletions WHERE expires_at < NOW()");
+  } catch (err) {
+    console.error("Error during expired token cleanup:", err);
   }
 });
 

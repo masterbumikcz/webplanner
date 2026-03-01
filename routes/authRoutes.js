@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import pool from "../db.js";
 import passport from "passport";
+import { loginLimiter } from "../middleware/rateLimitMiddleware.js";
 
 const router = express.Router();
 
@@ -26,6 +27,13 @@ router.post("/register", async (req, res) => {
       confirmPassword.trim().length === 0
     ) {
       req.flash("error", "Please confirm your password.");
+      return res.redirect("/register");
+    }
+
+    // Ověření formátu emailu
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      req.flash("error", "Please enter a valid email address.");
       return res.redirect("/register");
     }
 
@@ -74,6 +82,7 @@ router.post("/register", async (req, res) => {
 // Přihlášení uživatele
 router.post(
   "/login",
+  loginLimiter,
   passport.authenticate("local", {
     successRedirect: "/todo",
     failureRedirect: "/login",

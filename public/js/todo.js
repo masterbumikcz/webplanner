@@ -53,9 +53,14 @@ function updateClearReminderVisibility() {
 }
 
 // Převod z UTC ISO formátu do lokálního formátu pro input typu date
-function toLocalDateString(dateInput = new Date()) {
+function toLocalDateString(dateInput) {
+  if (typeof dateInput === "string") {
+    return dateInput.split("T")[0];
+  }
+
   const dateObj = new Date(dateInput);
   if (Number.isNaN(dateObj.getTime())) return "";
+
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const day = String(dateObj.getDate()).padStart(2, "0");
@@ -265,7 +270,7 @@ async function loadTasksForView() {
 
     // Vyčistí zobrazení úkolů a zobrazí načtené úkoly
     taskListContainer.innerHTML = "";
-    const todayLocal = toLocalDateString();
+    const todayLocal = toLocalDateString(new Date());
 
     const isQuickView = currentView !== "list";
 

@@ -4,6 +4,11 @@ import { ensureApiAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Validace, zda je parametr platné celé číslo (ID)
+function isValidId(value) {
+  return /^\d+$/.test(value);
+}
+
 // Pomocná funkce pro získání správného SQL řazení podle parametru sort
 function getTaskOrderBy(sort, fallbackOrderBy) {
   // Předpona řazení  (důležité úkoly na začátku, dokončené úkoly na konci)
@@ -59,6 +64,9 @@ router.post("/lists", ensureApiAuthenticated, async (req, res) => {
 
 // Smazání seznamu úkolů
 router.delete("/lists/:id", ensureApiAuthenticated, async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid list ID" });
+  }
   try {
     const result = await pool.query(
       "DELETE FROM task_lists WHERE id = $1 AND user_id = $2",
@@ -80,6 +88,10 @@ router.get(
   ensureApiAuthenticated,
   async (req, res) => {
     try {
+      if (!isValidId(req.params.taskListId)) {
+        return res.status(400).json({ error: "Invalid list ID" });
+      }
+
       // Získání správného řazení úkolů podle query parametru sort
       const orderBy = getTaskOrderBy(
         req.query.sort,
@@ -120,6 +132,10 @@ router.post(
     const { title } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Task title is required" });
+    }
+
+    if (!isValidId(req.params.taskListId)) {
+      return res.status(400).json({ error: "Invalid list ID" });
     }
 
     try {
@@ -274,6 +290,10 @@ router.patch(
   "/tasks/:id/completed",
   ensureApiAuthenticated,
   async (req, res) => {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid task ID" });
+    }
+
     const { is_completed } = req.body;
 
     try {
@@ -300,6 +320,10 @@ router.patch(
   "/tasks/:id/important",
   ensureApiAuthenticated,
   async (req, res) => {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({ error: "Invalid task ID" });
+    }
+
     const { is_important } = req.body;
 
     try {
@@ -323,6 +347,10 @@ router.patch(
 
 // Uložení změn úkolu
 router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid task ID" });
+  }
+
   const { title, due, remind_at } = req.body;
   if (!title || !title.trim()) {
     return res.status(400).json({ error: "Task title is required" });
@@ -352,6 +380,10 @@ router.put("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
 
 // Odstranění úkolu
 router.delete("/tasks/:id", ensureApiAuthenticated, async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid task ID" });
+  }
+
   try {
     // Odstranění úkolu z databáze
     const result = await pool.query(

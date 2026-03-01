@@ -22,12 +22,14 @@
 			</nav>
 		</div>
 	</header>
-
+	<!-- Hlavní obsah stránky nastavení -->
 	<main class="settings-container">
+		<!-- Message box pro zobrazení úspěšných nebo chybových zpráv -->
+		<div id="message-box" class="messages"></div>
+
+		<!-- Karta pro změnu hesla -->
 		<div class="settings-card">
 			<h2>Change Password</h2>
-			<p class="helper-text">Choose a strong password you do not use elsewhere.</p>
-			<div id="message-box" class="messages"></div>
 			<form action="/settings/change-password" id="change-password-form" method="POST">
 				<label for="current-password">Current password</label>
 				<input type="password" id="current-password" name="currentPassword" autocomplete="current-password">
@@ -42,10 +44,11 @@
 			</form>
 		</div>
 
+		<!-- Karta pro smazání účtu -->
 		<div class="settings-card danger-card">
 			<h2>Delete Account</h2>
 			<p class="helper-text">
-				We will send a confirmation email with a token. Your account will be deleted only after you confirm it.
+				You will get an email with a confirmation link. 
 			</p>
 			<form action="/settings/request-delete" id="delete-account-form" method="POST">
 				<label for="delete-password">Confirm your password</label>
@@ -53,9 +56,6 @@
 
 				<button type="submit" class="danger-button">Send deletion email</button>
 			</form>
-			<div class="danger-note">
-				<strong>Warning:</strong> This action is irreversible once confirmed.
-			</div>
 		</div>
 	</main>
 

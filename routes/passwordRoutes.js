@@ -2,20 +2,15 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
 import db from "../db.js";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-dotenv.config();
+import transporter from "../config/transporter.js";
+import { forgotPasswordLimiter } from "../middleware/rateLimitMiddleware.js";
 
 // Config
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Vyhledání uživatele podle e-mailu, vytvoření tokenu a odeslání e-mailu s odkazem pro reset hesla
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -33,23 +28,15 @@ router.post("/forgot-password", async (req, res) => {
       // Nastavení expirace tokenu (15 minut)
       const expiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString();
 
-      // Smazání předchozích tokenů pro daného uživatele a uložení nového tokenu do databáze (uložen je jako hash)
+      // Smazání předchozích tokenů pro daného uživatele
       await db.query("DELETE FROM password_resets WHERE user_id = $1", [
         user.id,
       ]);
+      // Uložení hashovaného tokenu s expirací do databáze
       await db.query(
         "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
         [user.id, tokenHash, expiresAt],
       );
-
-      // Vytvoření trasportéru pro odeslání emailu
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_PASS,
-        },
-      });
 
       // Vytvoření emailu s odkazem pro reset hesla
       const mailOptions = {
@@ -61,14 +48,14 @@ router.post("/forgot-password", async (req, res) => {
 
       // Odeslání emailu
       try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent: " + info.response);
+        await transporter.sendMail(mailOptions);
         req.flash(
           "success",
           "Password reset email sent successfully. Please check your inbox.",
         );
         return res.redirect("/forgot-password");
       } catch (error) {
+        // Chyba při odesílání emailu
         console.error("Error sending email:", error);
         req.flash(
           "error",
@@ -96,25 +83,17 @@ router.post("/forgot-password", async (req, res) => {
 router.get("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
   try {
-    // Hash tokenu pro porovnání s uloženým hashem v databázi
+    // Hashování tokenu z parametru a vyhledání v databázi
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-    // Vyhledání záznamu pro reset hesla podle hashe tokenu
     const resetRes = await db.query(
-      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1",
+      "SELECT expires_at FROM password_resets WHERE token_hash = $1",
       [tokenHash],
     );
     const resetRow = resetRes.rows[0];
 
-    // Ověření, zda token existuje nebo již nebyl použit
-    if (!resetRow || resetRow.used_at) {
-      req.flash("error", "Invalid or already used reset token.");
-      return res.redirect("/forgot-password");
-    }
-
-    // Ověření, zda token nevypršel
-    if (new Date(resetRow.expires_at) < new Date()) {
-      req.flash("error", "Reset token has expired. Please request a new one.");
+    // Kontrola, zda token existuje a není expirovaný
+    if (!resetRow || new Date(resetRow.expires_at) < new Date()) {
+      req.flash("error", "Invalid or expired reset token.");
       return res.redirect("/forgot-password");
     }
 
@@ -136,17 +115,14 @@ router.get("/reset-password/:token", async (req, res) => {
 // Zpracování formuláře pro zadání nového hesla, ověření tokenu a aktualizace hesla v databázi
 router.post("/reset-password", async (req, res) => {
   const { token, password, confirmPassword } = req.body;
-  // Vytvoření odkazu pro přesměrování zpět na formulář pro zadání nového hesla s tokenem v URL, pokud došlo k chybě
-  const resetFormRedirect = token
-    ? `/resetpassword.html?token=${encodeURIComponent(token)}`
-    : // Pokud token není k dispozici, odkaz přesměruje na stránku pro zadání e-mailu pro reset hesla
-      "/forgot-password";
-
   // Ověření, zda jsou všechny potřebné údaje k dispozici a validní
   if (typeof token !== "string" || token.trim().length === 0) {
-    req.flash("error", "Token is required.");
+    req.flash("error", "Invalid or missing reset token.");
     return res.redirect("/forgot-password");
   }
+
+  // Odkaz pro přesměrování zpět na formulář pro zadání nového hesla s tokenem v URL
+  const resetFormRedirect = `/resetpassword.html?token=${encodeURIComponent(token)}`;
 
   if (typeof password !== "string" || password.trim().length === 0) {
     req.flash("error", "Password is required.");
@@ -175,25 +151,17 @@ router.post("/reset-password", async (req, res) => {
 
   // Pokus o aktualizaci hesla pro uživatele spojeného s tokenem
   try {
-    // Hash tokenu pro porovnání s uloženým hashem v databázi
+    // Hashování tokenu z formuláře a vyhledání v databázi
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-    // Vyhledání záznamu pro reset hesla podle hashe tokenu
     const resetRes = await db.query(
-      "SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1",
+      "SELECT user_id, expires_at FROM password_resets WHERE token_hash = $1",
       [tokenHash],
     );
     const resetRow = resetRes.rows[0];
 
-    // Ověření, zda token existuje nebo již nebyl použit
-    if (!resetRow || resetRow.used_at) {
-      req.flash("error", "Invalid or already used reset token.");
-      return res.redirect("/forgot-password");
-    }
-
-    // Ověření, zda token nevypršel
-    if (new Date(resetRow.expires_at) < new Date()) {
-      req.flash("error", "Reset token has expired. Please request a new one.");
+    // Kontrola, zda token existuje a není expirovaný
+    if (!resetRow || new Date(resetRow.expires_at) < new Date()) {
+      req.flash("error", "Invalid or expired reset token.");
       return res.redirect("/forgot-password");
     }
 
@@ -205,11 +173,10 @@ router.post("/reset-password", async (req, res) => {
       hashedPassword,
       resetRow.user_id,
     ]);
-    // Označení tokenu jako použitého
-    await db.query(
-      "UPDATE password_resets SET used_at = NOW() WHERE token_hash = $1",
-      [tokenHash],
-    );
+    // Smazání použitého tokenu (vždy vytváříme jen jeden token)
+    await db.query("DELETE FROM password_resets WHERE token_hash = $1", [
+      tokenHash,
+    ]);
 
     req.flash("success", "Password reset successful. Please log in.");
     return res.redirect("/login");
