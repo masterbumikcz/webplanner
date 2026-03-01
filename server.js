@@ -190,10 +190,5 @@ cron.schedule("* * * * *", async () => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
   console.log(`Running in ${isProduction ? "production" : "development"} mode`);
-  console.log(`Test env base url: ${process.env.BASE_URL}`);
-  console.log(`Test env session secret: ${process.env.SESSION_SECRET}`);
-  console.log(`Test env Gmail user: ${process.env.GMAIL_USER}`);
-  console.log(`Test env Gmail pass: ${process.env.GMAIL_PASS}`);
-  console.log(`Test env database url: ${process.env.DATABASE_URL}`);
-  console.log(`Test env node env: ${process.env.NODE_ENV}`);
+  console.log(`Base url: ${process.env.BASE_URL}`);
 });
