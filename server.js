@@ -40,22 +40,14 @@ app.use(express.json());
 
 // Nastavení session s PostgreSQL jako úložištěm
 const PostgresSessionStore = pgSession(session);
-const sessionStore = new PostgresSessionStore({
-  pool: pool,
-  tableName: "session",
-  errorLog: (error) => {
-    console.error("Session store query error:", error);
-  },
-});
-
-sessionStore.on("error", (error) => {
-  console.error("Session store error:", error);
-});
 
 // Konfigurace session
 app.use(
   session({
-    store: sessionStore,
+    store: new PostgresSessionStore({
+      pool: pool,
+      tableName: "session",
+    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
@@ -115,20 +107,6 @@ app.get("/todo", ensureAuthenticated, (req, res) => {
 
 app.get("/calendar", ensureAuthenticated, (req, res) => {
   res.sendFile(join(__dirname, "public", "calendar.html"));
-});
-
-app.use((err, req, res, next) => {
-  console.error("Unhandled request error:", err);
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  if (req.path.startsWith("/password/reset-password")) {
-    return res.redirect("/forgot-password");
-  }
-
-  return res.status(500).send("Internal Server Error");
 });
 
 // Static files
@@ -212,4 +190,10 @@ cron.schedule("* * * * *", async () => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
   console.log(`Running in ${isProduction ? "production" : "development"} mode`);
+  console.log(`Test env base url: ${process.env.BASE_URL}`);
+  console.log(`Test env session secret: ${process.env.SESSION_SECRET}`);
+  console.log(`Test env Gmail user: ${process.env.GMAIL_USER}`);
+  console.log(`Test env Gmail pass: ${process.env.GMAIL_PASS}`);
+  console.log(`Test env database url: ${process.env.DATABASE_URL}`);
+  console.log(`Test env node env: ${process.env.NODE_ENV}`);
 });

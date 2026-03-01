@@ -14,7 +14,7 @@ const pool = new Pool({
 });
 
 // Test připojení k databázi
-pool.connect((err, client, release) => {
+pool.connect((err, _client, release) => {
   if (err) {
     console.error("Error connecting to Supabase PostgreSQL:", err.stack);
   } else {
