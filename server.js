@@ -191,4 +191,5 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
   console.log(`Running in ${isProduction ? "production" : "development"} mode`);
   console.log(`Base url: ${process.env.BASE_URL}`);
+  console.log("4.3.2026 zkouška portu na gmail");
 });

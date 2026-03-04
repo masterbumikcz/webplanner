@@ -145,7 +145,6 @@ router.post(
       // Odeslání emailu
       try {
         const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent: " + info.response);
         req.flash(
           "success",
           "Account deletion email sent successfully. Please check your inbox.",
