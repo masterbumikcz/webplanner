@@ -8,13 +8,10 @@ types.setTypeParser(1082, (value) => value);
 // Vytvoření poolu pro připojení k PostgreSQL databázi
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: true }
-      : false,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
-
-console.log("Production mode:", process.env.NODE_ENV === "production");
 
 // Test připojení k databázi
 pool.connect((err, _client, release) => {
