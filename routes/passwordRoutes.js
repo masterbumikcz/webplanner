@@ -38,17 +38,13 @@ router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
         [user.id, tokenHash, expiresAt],
       );
 
-      // Vytvoření emailu s odkazem pro reset hesla
-      const mailOptions = {
-        from: process.env.GMAIL_USER,
-        to: user.email,
-        subject: "Password reset for your Webplanner account",
-        text: `Click the following link to reset your password: ${process.env.BASE_URL}/password/reset-password/${token} \n\nThis link will expire in 15 minutes.`,
-      };
-
       // Odeslání emailu
       try {
-        await transporter.sendMail(mailOptions);
+        await transporter.sendMail({
+          to: user.email,
+          subject: "Password reset for your Webplanner account",
+          text: `Click the following link to reset your password: ${process.env.BASE_URL}/password/reset-password/${token} \n\nThis link will expire in 15 minutes.`,
+        });
         req.flash(
           "success",
           "Password reset email sent successfully. Please check your inbox.",

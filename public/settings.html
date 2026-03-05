@@ -5,7 +5,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Settings</title>
-	<link rel="stylesheet" href="/css/forms.css" />
+	<link rel="stylesheet" href="/css/base.css" />
 	<link rel="stylesheet" href="/css/settings.css" />
 </head>
 
@@ -48,7 +48,7 @@
 		<div class="settings-card danger-card">
 			<h2>Delete Account</h2>
 			<p class="helper-text">
-				You will get an email with a confirmation link. 
+				You will get an email with a confirmation link.
 			</p>
 			<form action="/settings/request-delete" id="delete-account-form" method="POST">
 				<label for="delete-password">Confirm your password</label>
@@ -60,11 +60,12 @@
 	</main>
 
 	<footer class="page-footer">
-		<p>&copy; WebPlanner</p>
+		<p>&copy; <span id="current-year"></span> Lukáš Staněk</p>
 	</footer>
 
 	<script src="/js/messages.js"></script>
 	<script src="/js/settings.js"></script>
+	<script src="/js/common.js"></script>
 </body>
 
 </html>

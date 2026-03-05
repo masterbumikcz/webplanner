@@ -562,6 +562,23 @@ addTasklistButton.onclick = async () => {
 // Inicializace aplikace - nastavení event listenerů a načtení počátečního stavu
 function initTodo() {
   taskReminderInput.addEventListener("input", updateClearReminderVisibility);
+
+  // Spuštění akce pro přidání úkolu stiskem klávesy Enter v inputu pro nový úkol
+  newTaskInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addTaskButton.click();
+    }
+  });
+
+  // Spuštění akce pro přidání seznamu stiskem klávesy Enter v inputu pro nový seznam
+  newTasklistInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addTasklistButton.click();
+    }
+  });
+
   setupQuickViews();
   setupTaskSort();
   loadTodolists();

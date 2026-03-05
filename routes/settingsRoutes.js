@@ -134,17 +134,13 @@ router.post(
         [req.user.id, tokenHash, expiresAt],
       );
 
-      // Vytvoření emailu s odkazem pro potvrzení smazání účtu
-      const mailOptions = {
-        from: process.env.GMAIL_USER,
-        to: user.email,
-        subject: "Account deletion request for your Webplanner account",
-        text: `You have requested to delete your Webplanner account. Please click the following link to confirm the deletion: ${process.env.BASE_URL}/settings/confirm-delete/${token} \n\nThis link will expire in 15 minutes.`,
-      };
-
       // Odeslání emailu
       try {
-        const info = await transporter.sendMail(mailOptions);
+        await transporter.sendMail({
+          to: user.email,
+          subject: "Account deletion request for your Webplanner account",
+          text: `You have requested to delete your Webplanner account. If you are sure you want to delete it with all its data, please click the following link to confirm: ${process.env.BASE_URL}/settings/confirm-delete/${token} \n\nThis link will expire in 15 minutes.`,
+        });
         req.flash(
           "success",
           "Account deletion email sent successfully. Please check your inbox.",

@@ -6,7 +6,7 @@ const messageBox = document.getElementById("message-box");
 form.addEventListener("submit", (event) => {
   // Kontrola, zda jsou všechna pole vyplněna
   if (!email.value.trim()) {
-    event.preventDefault();
+    event.preventDefault(); // Zabrání odeslání formuláře
     messageBox.textContent = "";
     const el = document.createElement("div");
     el.className = "message message--error";

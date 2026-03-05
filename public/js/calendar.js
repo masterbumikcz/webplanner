@@ -246,6 +246,26 @@ allDayInput.onchange = () => {
   normalizeAllDayTimes();
 };
 
+// Spuštění akce pro přidání nebo uložení události při stisku klávesy Enter v některém z inputů
+function submitEditorOnEnter(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+
+    // Pokud je již vybraná událost, spustí uložení, jinak vytvoření nové
+    if (selectedEvent) {
+      saveButton.click();
+      return;
+    }
+
+    addButton.click();
+  }
+}
+
+// Přidání event listenerů pro stisk klávesy Enter v inputech
+titleInput.addEventListener("keydown", submitEditorOnEnter);
+startInput.addEventListener("keydown", submitEditorOnEnter);
+endInput.addEventListener("keydown", submitEditorOnEnter);
+
 // Uložení úprav pro vybranou událost
 saveButton.onclick = async () => {
   if (!selectedEvent) {

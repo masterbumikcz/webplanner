@@ -144,16 +144,13 @@ cron.schedule("* * * * *", async () => {
       );
       const user = userRes.rows[0];
       if (user) {
-        // Vytvoření emailu s připomenutím
-        const mailOptions = {
-          from: process.env.GMAIL_USER,
-          to: user.email,
-          subject: "Webplanner task reminder: " + task.title,
-          text: `This is a reminder for your task "${task.title}".${task.due ? ` Due date: ${formatDueDate(task.due)}.` : ""}`,
-        };
         // Odeslání emailu uživatelovi
         try {
-          const info = await transporter.sendMail(mailOptions);
+          await transporter.sendMail({
+            to: user.email,
+            subject: "Webplanner task reminder: " + task.title,
+            text: `This is a reminder for your task "${task.title}".${task.due ? ` Due date: ${formatDueDate(task.due)}.` : ""}`,
+          });
           // Odstranění remind_at z úkolu, aby se připomenutí neodesílalo znovu
           await pool.query("UPDATE tasks SET remind_at = NULL WHERE id = $1", [
             task.id,
@@ -191,5 +188,4 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
   console.log(`Running in ${isProduction ? "production" : "development"} mode`);
   console.log(`Base url: ${process.env.BASE_URL}`);
-  console.log("4.3.2026 zkouška portu na gmail");
 });
